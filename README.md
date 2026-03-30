@@ -1,22 +1,22 @@
-# Sistema de Gestión de Transmisiones - Core ????
+ï»¿# Sistema de GestiÃ³n de Transmisiones - Core ğŸš—âš™ï¸
 
-Este es el núcleo (Core) del sistema transaccional para la gestión de un negocio de transmisiones de vehículos. Desarrollado como parte del proyecto para **INTEC**.
+Este es el nÃºcleo (Core) del sistema transaccional para la gestiÃ³n de un negocio de transmisiones de vehÃ­culos. Desarrollado como parte del proyecto para **INTEC**.
 
-## ? Características Principales
-- **Arquitectura Limpia:** Separación de capas (Core, Infraestructura, API).
-- **Sistema de Logs:** Registro automático de auditoría y errores en SQL Server.
-- **Seguridad:** Manejo de credenciales mediante plantillas de configuración.
-- **Integración con Azure:** Base de datos SQL en la nube.
+## âœ¨ CaracterÃ­sticas Principales
+- **Arquitectura Limpia:** SeparaciÃ³n de capas (Core, Infraestructura, API).
+- **Sistema de Logs:** Registro automÃ¡tico de auditorÃ­a y errores en SQL Server.
+- **Seguridad:** Manejo de credenciales mediante plantillas de configuraciÃ³n.
+- **IntegraciÃ³n con Azure:** Base de datos SQL en la nube.
 
-## ?? Configuración para el Equipo
-Para que el proyecto corra en tu máquina local, sigue estos pasos:
+## ğŸš€ ConfiguraciÃ³n para el Equipo
+Para que el proyecto corra en tu mÃ¡quina local, sigue estos pasos:
 
 1. Realiza un `git pull` de la rama `main`.
 2. Busca el archivo `appsettings.Example.json` en el proyecto API.
-3. Haz una copia y renómbrala a **`appsettings.json`**.
-4. Edita el archivo y coloca el nombre del servidor y la **Contraseña de Azure** en la cadena de conexión.
+3. Haz una copia y renÃ³mbrala a **`appsettings.json`**.
+4. Edita el archivo y coloca el nombre del servidor y la **ContraseÃ±a de Azure** en la cadena de conexiÃ³n.
 
-## ??? Tecnologías
+## ğŸ› ï¸ TecnologÃ­as
 - .NET 8 / C#
 - Entity Framework Core
-- SQL Server (Azure)
+- SQL Server (Azure).
