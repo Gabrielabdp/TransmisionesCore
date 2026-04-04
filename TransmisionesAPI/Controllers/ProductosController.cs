@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TransmisionesCore.UseCases;
+using TransmisionesCore.Entities;
+
 
 namespace TransmisionesAPI.Controllers;
 
@@ -23,5 +25,27 @@ public class ProductosController : ControllerBase
     {
         await _useCases.ActualizarPrecioAsync(id, nuevoPrecio, nuevoCosto);
         return NoContent();
+    }
+
+    [HttpPost("ajustar-stock")]
+    public async Task<IActionResult> AjustarStock([FromBody] AjustarStockRequest req)
+    {
+        try
+        {
+            // Llamamos al UseCase que conectamos al Repositorio
+            var nuevoStock = await _useCases.AjustarDeInventarioAsync(req);
+
+            return Ok(new
+            {
+                mensaje = "Inventario actualizado correctamente en Azure",
+                stockActual = nuevoStock
+            });
+        }
+        catch (Exception ex)
+        {
+            // Esto atrapará errores como "Stock insuficiente" enviados desde el SP
+            return BadRequest(new { error = ex.Message });
+        }
+
     }
 }

@@ -1,4 +1,5 @@
 using TransmisionesCore.Entities;
+using TransmisionesCore.UseCases;
 
 namespace TransmisionesCore.Interfaces;
 
@@ -16,6 +17,8 @@ public interface IProductoRepository
     Task<IEnumerable<Producto>> ObtenerTodosAsync(int? idCategoria = null, bool soloConStock = false);
     Task<Producto> InsertarAsync(Producto producto);
     Task ActualizarAsync(Producto producto);
+
+    Task<int> AjustarInventarioAsync(AjustarStockRequest request);
 }
 
 public interface IOrdenRepository
@@ -93,3 +96,12 @@ public interface IDevolucionRepository
     Task<Devolucion> InsertarAsync(Devolucion devolucion);
     Task ActualizarAsync(Devolucion devolucion);
 }
+public interface IServicioRepository
+{
+    Task<Servicio?> ObtenerPorIdAsync(int id);
+    Task<IEnumerable<Servicio>> ObtenerTodosAsync(bool soloActivos = true);
+    Task<Servicio> InsertarAsync(Servicio servicio);
+    Task ActualizarAsync(Servicio servicio);
+}
+
+

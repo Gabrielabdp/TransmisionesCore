@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TransmisionesCore.Interfaces;
+using TransmisionesCore.UseCases;
 using TransmisionesInfraestructura.Data;
 
 namespace TransmisionesAPI;
@@ -99,6 +100,26 @@ public static class PruebasEndpoints
             );
 
             return Results.Ok(new { Mensaje = "Log enviado a la base de datos con éxito" });
+        });
+
+        // 9. Prueba de Ajuste de Stock 
+        group.MapPost("/test-ajuste-stock", async (AjustarStockRequest req, ProductoUseCases useCases) =>
+        {
+            try
+            {
+               
+                var nuevoStock = await useCases.AjustarDeInventarioAsync(req);
+
+                return Results.Ok(new
+                {
+                    Mensaje = "Prueba de SP en Azure exitosa",
+                    StockFinal = nuevoStock
+                });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { Error = ex.Message });
+            }
         });
     }
 }
