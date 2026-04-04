@@ -11,7 +11,8 @@ public class Empleado
     public string? Email { get; set; }
     public DateTime Fecha_ingreso { get; set; }
     public bool Activo { get; set; } = true;
-    public Usuario Usuario { get; set; } = null!;
-    public Sucursal Sucursal { get; set; } = null!;
+ 
+    public Usuario? Usuario { get; set; } = null!;
+    public Sucursal? Sucursal { get; set; } = null!;
     public string NombreCompleto => $"{Nombre} {Apellido}";
 }

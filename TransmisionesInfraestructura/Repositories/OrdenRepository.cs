@@ -25,11 +25,15 @@ public class OrdenRepository : IOrdenRepository
         if (idCliente.HasValue) query = query.Where(o => o.Id_cliente == idCliente);
         return await query.ToListAsync();
     }
-
     public async Task<IEnumerable<Orden>> ObtenerCotizacionesAsync(int? idCliente = null)
-    {
-        var query = _context.Ordenes.Where(o => o.Estado_orden == "Cotizacion");
-        if (idCliente.HasValue) query = query.Where(o => o.Id_cliente == idCliente);
+    { 
+        var query = _context.Ordenes.Where(o => o.Tipo_orden == "Cotizacion");
+
+        if (idCliente.HasValue)
+        {
+            query = query.Where(o => o.Id_cliente == idCliente.Value);
+        }
+
         return await query.ToListAsync();
     }
 

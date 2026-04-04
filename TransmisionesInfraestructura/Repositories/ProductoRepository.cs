@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TransmisionesCore.Entities;
 using TransmisionesCore.Interfaces;
+using TransmisionesCore.UseCases;
 using TransmisionesInfraestructura.Data;
 
 namespace TransmisionesInfraestructura.Repositories;
@@ -35,5 +36,17 @@ public class ProductoRepository : IProductoRepository
     {
         _context.Productos.Update(producto);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<int> AjustarInventarioAsync(AjustarStockRequest request)
+    {
+        var resultado = await _context.Database
+            .SqlQueryRaw<int>(
+                "EXEC sp_AjustarInventario @Id_producto={0}, @Id_empleado={1}, @Tipo_ajuste={2}, @Cantidad={3}, @Motivo={4}",
+                request.IdProducto, request.IdEmpleado, request.TipoAjuste, request.Cantidad, request.Motivo ?? (object)DBNull.Value
+            )
+            .ToListAsync();
+
+        return resultado.FirstOrDefault();
     }
 }

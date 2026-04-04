@@ -44,4 +44,10 @@ public class ProductoUseCases
 
     public async Task<IEnumerable<Producto>> ObtenerTodosAsync(int? idCategoria = null, bool soloConStock = false)
         => await _repo.ObtenerTodosAsync(idCategoria, soloConStock);
+
+    public async Task<int> AjustarDeInventarioAsync(AjustarStockRequest req)
+    {
+        // Usamos _repo que es el nombre que definiste arriba
+        return await _repo.AjustarInventarioAsync(req);
+    }
 }

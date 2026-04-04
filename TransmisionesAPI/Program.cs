@@ -38,13 +38,17 @@ builder.Services.AddScoped<ICajaRepository, CajaRepository>();
 builder.Services.AddScoped<IEmpleadoRepository, EmpleadoRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
+builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
+
 
 // Use Cases
+builder.Services.AddScoped<AutenticacionUseCase>();
 builder.Services.AddScoped<OrdenUseCases>();
 builder.Services.AddScoped<ClienteUseCases>();
 builder.Services.AddScoped<ProductoUseCases>();
 builder.Services.AddScoped<CajaUseCases>();
 builder.Services.AddScoped<FacturaUseCases>();
+builder.Services.AddScoped<VehiculoUseCases>();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -74,4 +78,4 @@ app.MapPruebasDb(); // <--- Solo esta línea limpia
 
 app.Run();
 
-app.Run();
+

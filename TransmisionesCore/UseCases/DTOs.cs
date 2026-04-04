@@ -22,3 +22,10 @@ public record CrearProductoRequest(
     int IdCategoria, int IdTipoTrans, string Descripcion,
     decimal PrecioUnitario, decimal CostoUnitario,
     string? Marca = null, int StockInicial = 0);
+
+public record AjustarStockRequest(
+    int IdProducto,
+    int IdEmpleado,
+    string TipoAjuste,
+    int Cantidad,
+    string? Motivo = null);
