@@ -18,8 +18,14 @@ public class EmpleadoRepository : IEmpleadoRepository
 
     public async Task<IEnumerable<Empleado>> ObtenerTodosAsync(int? idSucursal = null)
     {
-        var query = _context.Empleados.AsQueryable();
-        if (idSucursal.HasValue) query = query.Where(e => e.Id_sucursal == idSucursal);
+        var query = _context.Empleados
+                    .Include(e => e.Usuario)
+                    .Include(e => e.Sucursal)
+                    .AsQueryable();
+
+        if (idSucursal.HasValue)
+            query = query.Where(e => e.Id_sucursal == idSucursal);
+
         return await query.ToListAsync();
     }
 

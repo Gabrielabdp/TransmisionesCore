@@ -166,6 +166,96 @@ namespace TransmisionesIntegracion.Controllers
             return Ok(new { modoOffline = true, exito = true, mensaje = "Producto guardado localmente. Se sincronizará luego." });
         }
 
+        [HttpPost("ajustar-stock")]
+        public async Task<IActionResult> AjustarStock([FromBody] AjustarStockIntegracionDto peticion)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(5);
+                var urlCore = "https://localhost:56678/api/Productos/ajustar-stock";
+
+                var jsonContent = new StringContent(JsonSerializer.Serialize(peticion), Encoding.UTF8, "application/json");
+                var respuestaCore = await cliente.PostAsync(urlCore, jsonContent);
+
+                if (respuestaCore.IsSuccessStatusCode)
+                {
+                    var jsonRespuesta = await respuestaCore.Content.ReadAsStringAsync();
+                    return Content(jsonRespuesta, "application/json");
+                }
+
+                // Si el CORE rechaza por regla de negocio (ej. "Stock insuficiente")
+                if (respuestaCore.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(new
+                    {
+                        exito = false,
+                        mensaje = "El CORE rechazó el ajuste de inventario.",
+                        detalle = await respuestaCore.Content.ReadAsStringAsync()
+                    });
+                }
+
+                return await GuardarAjusteStockOffline(peticion);
+            }
+            catch (Exception)
+            {
+                return await GuardarAjusteStockOffline(peticion);
+            }
+        }
+
+        private async Task<IActionResult> GuardarAjusteStockOffline(AjustarStockIntegracionDto datos)
+        {
+            var productoLocal = await _context.ProductosCache.FirstOrDefaultAsync(p => p.Id == datos.IdProducto);
+
+            if (productoLocal == null)
+                return NotFound(new { mensaje = "(Offline) El producto no existe en la caché local." });
+
+            // SANITIZACIÓN: Convertimos la cantidad a positivo absoluto para evitar que "Menos por Menos sea Más"
+            int cantidadOperacion = Math.Abs(datos.Cantidad);
+
+            // 1. Caché Optimista con Reglas de Negocio
+            if (datos.TipoAjuste == "Entrada")
+            {
+                productoLocal.StockActual += cantidadOperacion;
+            }
+            else if (datos.TipoAjuste == "Salida" || datos.TipoAjuste == "Danado")
+            {
+                if (productoLocal.StockActual < cantidadOperacion)
+                {
+                    return BadRequest(new { mensaje = "(Offline) Stock local insuficiente para realizar esta salida." });
+                }
+                productoLocal.StockActual -= cantidadOperacion;
+            }
+            else // Ajuste_Manual (Reemplazo absoluto por el número exacto que enviaron)
+            {
+                // El ajuste manual reemplaza el stock con el número enviado (no aplica Math.Abs aquí por si envían 0)
+                productoLocal.StockActual = datos.Cantidad < 0 ? 0 : datos.Cantidad;
+            }
+
+            productoLocal.UltimaActualizacion = DateTime.Now;
+
+            // 2. Al buzón de salida enviamos el JSON original (o podemos forzar que el JSON lleve el número sanitizado)
+            // Es mejor limpiar el objeto antes de guardarlo en SQLite para que el CORE no reciba el error tampoco
+            datos.Cantidad = datos.TipoAjuste == "Ajuste_Manual" ? datos.Cantidad : cantidadOperacion;
+
+            var jsonEmpacado = JsonSerializer.Serialize(datos);
+            _context.TransaccionesPendientes.Add(new TransaccionPendiente
+            {
+                TipoTransaccion = "AjustarStockProducto",
+                DatosJson = jsonEmpacado,
+                FechaIntento = DateTime.Now,
+                Sincronizado = false
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                modoOffline = true,
+                mensaje = "Inventario ajustado en caché local. Se sincronizará luego.",
+                stockActual = productoLocal.StockActual
+            });
+        }
         private async Task<IActionResult> GuardarPatchOffline(int id, decimal precio, decimal? costo)
         {
             var datosPatch = new { IdProducto = id, NuevoPrecio = precio, NuevoCosto = costo };
@@ -202,6 +292,15 @@ namespace TransmisionesIntegracion.Controllers
         public decimal CostoUnitario { get; set; }
         public string Marca { get; set; } = string.Empty;
         public int StockInicial { get; set; }
+    }
+
+    public class AjustarStockIntegracionDto
+    {
+        public int IdProducto { get; set; }
+        public int IdEmpleado { get; set; }
+        public string TipoAjuste { get; set; } = string.Empty; // Entrada, Salida, Danado, Ajuste_Manual
+        public int Cantidad { get; set; }
+        public string Motivo { get; set; } = string.Empty;
     }
 
     public class ProductoCoreDto

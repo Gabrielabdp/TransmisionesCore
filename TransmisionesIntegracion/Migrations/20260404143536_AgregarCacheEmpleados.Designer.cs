@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TransmisionesIntegracion.Data;
 
@@ -10,9 +11,11 @@ using TransmisionesIntegracion.Data;
 namespace TransmisionesIntegracion.Migrations
 {
     [DbContext(typeof(IntegracionDbContext))]
-    partial class IntegracionDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260404143536_AgregarCacheEmpleados")]
+    partial class AgregarCacheEmpleados
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.25");
@@ -262,40 +265,6 @@ namespace TransmisionesIntegracion.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("TransaccionesPendientes");
-                });
-
-            modelBuilder.Entity("TransmisionesIntegracion.Models.VehiculoCache", b =>
-                {
-                    b.Property<string>("Matricula")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Anio")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("IdCliente")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("IdTipoTrans")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Marca")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Modelo")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UltimaActualizacion")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Matricula");
-
-                    b.ToTable("VehiculosCache");
                 });
 #pragma warning restore 612, 618
         }
