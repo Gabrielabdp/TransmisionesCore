@@ -43,6 +43,7 @@ public interface ICajaRepository
     Task<Caja?> ObtenerPorIdAsync(int id);
     Task<IEnumerable<Caja>> ObtenerTodosAsync(int? idSucursal = null);
     Task ActualizarAsync(Caja caja);
+    Task RegistrarMovimientoAsync(MovimientoCaja movimiento);
 }
 
 public interface IProveedorRepository

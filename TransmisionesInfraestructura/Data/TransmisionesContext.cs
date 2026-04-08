@@ -155,6 +155,19 @@ public class TransmisionesContext : DbContext
             .HasForeignKey(c => c.Id_usuario_cierre).OnDelete(DeleteBehavior.Restrict);
 
         // =====================================================
+        // 7B. RELACIONES MOVIMIENTO CAJA
+        // =====================================================
+        modelBuilder.Entity<MovimientoCaja>().ToTable("MovimientoCaja").HasKey(m => m.Id_movimiento);
+
+        modelBuilder.Entity<MovimientoCaja>()
+            .HasOne(m => m.Caja).WithMany()
+            .HasForeignKey(m => m.Id_caja).OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MovimientoCaja>()
+            .HasOne(m => m.Usuario).WithMany()
+            .HasForeignKey(m => m.Id_usuario).OnDelete(DeleteBehavior.Restrict);
+
+        // =====================================================
         // 8. RELACIONES PRODUCTO
         // =====================================================
         modelBuilder.Entity<Producto>()
