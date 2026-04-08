@@ -9,6 +9,8 @@ public class Caja
     public string Estado { get; set; } = "Cerrada";
     public decimal Saldo_inicial { get; set; }
     public decimal Saldo_final { get; set; }
+    public decimal Saldo_real { get; set; }
+    public decimal Diferencia { get; set; }
     public string? Tipo_movimiento { get; set; }
     public DateTime? Ultima_apertura { get; set; }
     public DateTime? Ultimo_cierre { get; set; }

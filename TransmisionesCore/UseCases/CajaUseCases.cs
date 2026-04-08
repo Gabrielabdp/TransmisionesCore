@@ -27,7 +27,7 @@ public class CajaUseCases
         await _repo.ActualizarAsync(caja);
     }
 
-    public async Task CerrarCajaAsync(int idCaja, int idUsuarioCierre)
+    public async Task CerrarCajaAsync(int idCaja, int idUsuarioCierre, decimal saldoReal)
     {
         var caja = await _repo.ObtenerPorIdAsync(idCaja)
             ?? throw new EntidadNoEncontradaException("Caja", idCaja);
@@ -37,6 +37,8 @@ public class CajaUseCases
 
         caja.Estado            = "Cerrada";
         caja.Id_usuario_cierre = idUsuarioCierre;
+        caja.Saldo_real        = saldoReal;
+        caja.Diferencia        = saldoReal - caja.Saldo_final;
         caja.Ultimo_cierre     = DateTime.UtcNow;
         caja.Tipo_movimiento   = "Cierre";
 
@@ -69,6 +71,32 @@ public class CajaUseCases
             Monto = monto,
             Tipo = tipo,
             Motivo = motivo,
+            Fecha = DateTime.UtcNow
+        });
+
+        await _repo.ActualizarAsync(caja);
+    }
+
+    public async Task CobrarOrdenAsync(int idCaja, int idUsuario, decimal montoTotal, string motivoCobro)
+    {
+        var caja = await _repo.ObtenerPorIdAsync(idCaja)
+            ?? throw new EntidadNoEncontradaException("Caja", idCaja);
+
+        if (caja.Estado != "Abierta")
+            throw new CajaCerradaException(caja.Codigo_caja);
+
+        // El cobro de una orden siempre es una ENTRADA de dinero
+        caja.Saldo_final += montoTotal;
+        caja.Tipo_movimiento = "Venta";
+
+        // Registramos un movimiento detallado para que aparezca en el historial de la caja
+        await _repo.RegistrarMovimientoAsync(new MovimientoCaja
+        {
+            Id_caja = idCaja,
+            Id_usuario = idUsuario,
+            Monto = montoTotal,
+            Tipo = "Entrada",
+            Motivo = $"Cobro de Orden: {motivoCobro}",
             Fecha = DateTime.UtcNow
         });
 
