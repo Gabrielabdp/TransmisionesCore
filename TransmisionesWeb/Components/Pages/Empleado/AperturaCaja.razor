@@ -1,0 +1,72 @@
+@page "/empleado/apertura"
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<div class="container-fluid bg-light vh-100 d-flex align-items-center justify-content-center">
+    <div class="card shadow-lg border-0 rounded-4" style="max-width: 450px; width: 100%;">
+        <div class="card-header bg-dark text-white text-center py-4 rounded-top-4">
+            <i class="bi bi-unlock-fill display-4 text-warning mb-2"></i>
+            <h2 class="fw-bold mb-0">Apertura de Caja</h2>
+            <p class="text-white-50 small mb-0">Transmisiones MAG - Gestión Operativa</p>
+        </div>
+        <div class="card-body p-5">
+            <form @onsubmit="IniciarJornada">
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">CÓDIGO DE EMPLEADO</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-person-badge"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0" @bind="CodigoEmpleado" placeholder="Ej: EMP-001" required />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">MONTO INICIAL EN CAJA (RD$)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-cash-stack"></i></span>
+                        <input type="number" step="0.01" class="form-control border-start-0 ps-0 fs-4 fw-bold text-success" @bind="MontoInicial" placeholder="0.00" required />
+                    </div>
+                    <div class="form-text mt-2 small">Ingrese el fondo de sencillo disponible para dar cambio.</div>
+                </div>
+
+                <div class="d-grid gap-2 mt-5">
+                    <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold rounded-pill shadow">
+                        INICIAR JORNADA <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                    <a href="/" class="btn btn-link text-muted text-decoration-none small">Volver al Portal Principal</a>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer bg-white border-0 text-center pb-4">
+            <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2">Sucursal: Santo Domingo Centro</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string CodigoEmpleado { get; set; } = "";
+    private decimal MontoInicial { get; set; }
+
+    private void IniciarJornada()
+    {
+        // En una fase posterior, esto llamará a la API de Apertura que creamos
+        // Por ahora, navegamos a la terminal de caja
+        Navigation.NavigateTo("/empleado/caja");
+    }
+}
+
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    .input-group-text {
+        border-radius: 0.75rem 0 0 0.75rem;
+    }
+    .form-control {
+        border-radius: 0 0.75rem 0.75rem 0;
+        padding: 0.75rem;
+    }
+    .form-control:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+</style>
