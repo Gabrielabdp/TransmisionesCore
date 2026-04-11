@@ -1,0 +1,129 @@
+@page "/registro"
+@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<div class="login-container">
+    <div class="login-card shadow-lg">
+        <h2 class="text-center fw-bold text-success">Crea tu Cuenta ⚙️</h2>
+        <p class="text-muted text-center mb-4">Regístrate para ver el historial de tus servicios</p>
+
+        <EditForm Model="regModel" OnValidSubmit="HandleRegistro" FormName="registro-form">
+            <DataAnnotationsValidator />
+
+            <div class="row text-start">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small fw-bold">Nombre</label>
+                    <InputText class="form-control" @bind-Value="regModel.Nombre" placeholder="Juan" />
+                    <ValidationMessage For="@(() => regModel.Nombre)" class="text-danger small" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label small fw-bold">Apellido</label>
+                    <InputText class="form-control" @bind-Value="regModel.Apellido" placeholder="Pérez" />
+                    <ValidationMessage For="@(() => regModel.Apellido)" class="text-danger small" />
+                </div>
+            </div>
+
+            <div class="form-group mb-3 text-start">
+                <label class="form-label small fw-bold">Correo Electrónico</label>
+                <InputText class="form-control" @bind-Value="regModel.Email" placeholder="juan@correo.com" />
+                <ValidationMessage For="@(() => regModel.Email)" class="text-danger small" />
+            </div>
+
+            <div class="form-group mb-4 text-start">
+                <label class="form-label small fw-bold">Contraseña</label>
+                <InputText type="password" class="form-control" @bind-Value="regModel.Password" placeholder="••••••••" />
+                <ValidationMessage For="@(() => regModel.Password)" class="text-danger small" />
+            </div>
+
+            <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm" disabled="@cargando">
+                @if (cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                Registrarme
+            </button>
+            
+            <div class="text-center mt-3">
+                <span class="text-muted small">¿Ya tienes cuenta? </span>
+                <a href="login" class="text-decoration-none small">Inicia sesión</a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3 py-2 small">@errorMessage</div>
+            }
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private RegistroModel regModel = new();
+    private string? errorMessage;
+    private bool cargando = false;
+
+    private async Task HandleRegistro()
+    {
+        cargando = true;
+        errorMessage = null;
+
+        try
+        {
+            var respuesta = await Http.PostAsJsonAsync("api/usuarios/registro", regModel);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                var error = await respuesta.Content.ReadFromJsonAsync<ErrorResponse>();
+                errorMessage = error?.Mensaje ?? "Ocurrió un error al registrar el usuario.";
+            }
+        }
+        catch (Exception)
+        {
+            errorMessage = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    public class RegistroModel
+    {
+        [Required(ErrorMessage = "Obligatorio")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Obligatorio")]
+        public string Apellido { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Obligatorio"), EmailAddress(ErrorMessage = "Correo inválido")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Obligatorio"), MinLength(6, ErrorMessage = "Mínimo 6 caracteres")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class ErrorResponse
+    {
+        public string Mensaje { get; set; } = string.Empty;
+    }
+}
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        background-color: #f0f2f5;
+    }
+    .login-card {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 1.5rem;
+        width: 100%;
+        max-width: 500px;
+    }
+</style>

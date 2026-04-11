@@ -1,0 +1,112 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<div class="login-container">
+    <div class="login-card shadow-lg">
+        <h2 class="text-center fw-bold text-primary">Portal de Clientes 🚗</h2>
+        <p class="text-muted text-center mb-4">Inicia sesión con tu correo electrónico</p>
+
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login-form">
+            <DataAnnotationsValidator />
+
+            <div class="form-group mb-3 text-start">
+                <label class="form-label">Correo Electrónico</label>
+                <InputText class="form-control" @bind-Value="loginModel.Email" placeholder="ejemplo@correo.com" />
+                <ValidationMessage For="@(() => loginModel.Email)" class="text-danger small" />
+            </div>
+
+            <div class="form-group mb-4 text-start">
+                <label class="form-label">Contraseña</label>
+                <InputText type="password" class="form-control" @bind-Value="loginModel.Password" placeholder="••••••••" />
+                <ValidationMessage For="@(() => loginModel.Password)" class="text-danger small" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm" disabled="@cargando">
+                @if (cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                Ingresar al Portal
+            </button>
+            
+            <div class="text-center mt-3">
+                <span class="text-muted">¿No tienes cuenta? </span>
+                <a href="registro" class="text-decoration-none">Regístrate aquí</a>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3 py-2 small">@errorMessage</div>
+            }
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string? errorMessage;
+    private bool cargando = false;
+
+    private async Task HandleLogin()
+    {
+        cargando = true;
+        errorMessage = null;
+
+        try
+        {
+            var respuesta = await Http.PostAsJsonAsync("api/usuarios/login", loginModel);
+
+            if (respuesta.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                var error = await respuesta.Content.ReadFromJsonAsync<ErrorResponse>();
+                errorMessage = error?.Mensaje ?? "Credenciales incorrectas o error de conexión.";
+            }
+        }
+        catch (Exception)
+        {
+            errorMessage = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "El correo es obligatorio")]
+        [EmailAddress(ErrorMessage = "Correo electrónico no válido")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    public class ErrorResponse
+    {
+        public string Mensaje { get; set; } = string.Empty;
+    }
+}
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        background-color: #f0f2f5;
+    }
+    .login-card {
+        background: white;
+        padding: 3rem;
+        border-radius: 1.5rem;
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+    }
+</style>

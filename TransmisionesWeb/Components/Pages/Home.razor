@@ -1,0 +1,112 @@
+@page "/"
+
+<PageTitle>Dashboard - Transmisiones Core</PageTitle>
+
+<div class="container py-4">
+    <!-- Hero Section -->
+    <div class="hero-banner p-5 mb-5 rounded-4 shadow-lg text-white d-flex flex-column align-items-center justify-content-center text-center">
+        <h1 class="display-3 fw-bold mb-3">Transmisiones MAG 🚗⚙️</h1>
+        <p class="lead mb-4 opacity-75">Tu sistema de gestión experto en transmisiones automáticas y manuales.</p>
+        <div class="d-flex gap-3">
+            <a href="catalogo" class="btn btn-light btn-lg rounded-pill px-5 py-3 fw-bold shadow">Ver Catálogo</a>
+            <a href="login" class="btn btn-outline-light btn-lg rounded-pill px-5 py-3 fw-bold">Mi Cuenta</a>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white text-center">
+                <i class="bi bi-gear-fill text-primary display-5 mb-2"></i>
+                <h4 class="fw-bold mb-0">+500</h4>
+                <p class="text-muted small mb-0">Repuestos en Stock</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white text-center">
+                <i class="bi bi-tools text-success display-5 mb-2"></i>
+                <h4 class="fw-bold mb-0">24/7</h4>
+                <p class="text-muted small mb-0">Servicio Técnico</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white text-center">
+                <i class="bi bi-people-fill text-info display-5 mb-2"></i>
+                <h4 class="fw-bold mb-0">1.2k</h4>
+                <p class="text-muted small mb-0">Clientes Satisfechos</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white text-center">
+                <i class="bi bi-shield-check text-warning display-5 mb-2"></i>
+                <h4 class="fw-bold mb-0">100%</h4>
+                <p class="text-muted small mb-0">Garantía Asegurada</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Info Section -->
+    <div class="row g-4">
+        <div class="col-md-7">
+            <div class="p-5 bg-white rounded-4 shadow-sm h-100">
+                <h2 class="fw-bold mb-4 border-bottom pb-3">Nuestra Misión</h2>
+                <p class="text-muted fs-5 leading-relaxed">
+                    Nacimos con el propósito de ofrecer una solución integral para el corazón de cada vehículo: su transmisión. 
+                    Combinamos ingeniería de precisión con un servicio humano honesto y transparente. 
+                    Nuestro sistema está diseñado para que cada cliente tenga el control total sobre el mantenimiento de su automóvil.
+                </p>
+                <div class="mt-4">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-primary me-3 fs-4"></i>
+                        <span class="fs-5">Diagnóstico preciso por computadora</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="bi bi-check-circle-fill text-primary me-3 fs-4"></i>
+                        <span class="fs-5">Uso de fluidos certificados internacionalmente</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-check-circle-fill text-primary me-3 fs-4"></i>
+                        <span class="fs-5">Técnicos certificados por INTEC</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="p-5 bg-dark text-white rounded-4 shadow-sm h-100">
+                <h2 class="fw-bold mb-4 text-warning">Contáctanos</h2>
+                <div class="mb-4">
+                    <h5 class="fw-bold">📍 Ubicación</h5>
+                    <p class="text-white-50">Av. Los Próceres #49, INTEC, Santo Domingo.</p>
+                </div>
+                <div class="mb-4">
+                    <h5 class="fw-bold">📞 Teléfono</h5>
+                    <p class="text-white-50">+1 (809) 123-4567</p>
+                </div>
+                <div>
+                    <h5 class="fw-bold">⏰ Horario</h5>
+                    <p class="text-white-50">Lun - Vie: 8:00 AM - 6:00 PM<br>Sáb: 9:00 AM - 1:00 PM</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hero-banner {
+        background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?q=80&w=1600&auto=format&fit=crop');
+        background-size: cover;
+        background-position: center;
+        min-height: 400px;
+    }
+    .stat-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: default;
+    }
+    .stat-card:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+    }
+    .leading-relaxed {
+        line-height: 1.8;
+    }
+</style>

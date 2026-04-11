@@ -1,0 +1,106 @@
+@page "/catalogo"
+@using TransmisionesCore.Entities
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container mt-4 pb-5">
+    <div class="header-section mb-5 text-center">
+        <h1 class="display-4 fw-bold text-dark">Servicios Especializados ⚙️</h1>
+        <p class="lead text-muted">Mantén tu transmisión en perfectas condiciones con los mejores expertos.</p>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-md-12 text-center">
+            <div class="btn-group p-1 bg-light rounded-pill shadow-sm" role="group">
+                <button type="button" class="btn rounded-pill px-4 @(filter == "Todos" ? "btn-primary shadow" : "btn-light")" @onclick='() => SetFilter("Todos")'>Todos</button>
+                <button type="button" class="btn rounded-pill px-4 @(filter == "Productos" ? "btn-primary shadow" : "btn-light")" @onclick='() => SetFilter("Productos")'>Repuestos</button>
+                <button type="button" class="btn rounded-pill px-4 @(filter == "Servicios" ? "btn-primary shadow" : "btn-light")" @onclick='() => SetFilter("Servicios")'>Servicios Técnicos</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        @foreach (var item in GetFilteredItems())
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm border-0 item-card rounded-4 overflow-hidden">
+                    <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center" style="height: 180px; background: #f8f9fa;">
+                        <span style="font-size: 5rem;">@(item.IsService ? "🛠️" : "📦")</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-2">
+                            <span class="badge @(item.IsService ? "bg-info" : "bg-warning") text-dark rounded-pill">@(item.IsService ? "Servicio" : "Producto")</span>
+                        </div>
+                        <h4 class="card-title fw-bold">@item.Nombre</h4>
+                        <p class="card-text text-muted small">@item.Descripcion</p>
+                        
+                        <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted small d-block">Precio:</span>
+                                <span class="h4 mb-0 text-primary fw-bold">RD$ @item.Precio.ToString("N2")</span>
+                            </div>
+                            <button class="btn btn-dark rounded-pill px-4 fw-bold" @onclick="() => Comprar(item)">Contratar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string filter = "Todos";
+
+    private void SetFilter(string newFilter) 
+    {
+        filter = newFilter;
+    }
+
+    private void Comprar(CatalogItem item)
+    {
+        // Navegar a la pantalla de pago/resumen pasando los datos (simplificado para el prototipo)
+        Navigation.NavigateTo($"/checkout?nombre={item.Nombre}&precio={item.Precio}");
+    }
+
+    private List<CatalogItem> GetFilteredItems()
+    {
+        var items = GetMockData();
+        if (filter == "Todos") return items;
+        if (filter == "Productos") return items.Where(x => !x.IsService).ToList();
+        if (filter == "Servicios") return items.Where(x => x.IsService).ToList();
+        return items;
+    }
+
+    private List<CatalogItem> GetMockData()
+    {
+        return new List<CatalogItem>
+        {
+            new() { Nombre = "Aceite Sintético ATF", Descripcion = "Lubricante de alto desempeño para cajas automáticas.", Precio = 1250, IsService = false },
+            new() { Nombre = "Filtro Toyota/Honda", Descripcion = "Filtro original de máxima filtración de impurezas.", Precio = 950, IsService = false },
+            new() { Nombre = "Escaneo Diagnóstico", Descripcion = "Revisión computarizada de códigos de error.", Precio = 1500, IsService = true },
+            new() { Nombre = "Mantenimiento Preventivo", Descripcion = "Limpieza de cuerpo de válvulas y cambio de fluido.", Precio = 3500, IsService = true },
+            new() { Nombre = "Reconstrucción Parcial", Descripcion = "Cambio de discos y bandas de fricción.", Precio = 15000, IsService = true }
+        };
+    }
+
+    public class CatalogItem
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get; set; } = string.Empty;
+        public decimal Precio { get; set; }
+        public bool IsService { get; set; }
+    }
+}
+
+<style>
+    .item-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .item-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.12) !important;
+    }
+    .bg-gradient-primary {
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+</style>

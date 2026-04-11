@@ -13,8 +13,11 @@ public class UsuarioRepository : IUsuarioRepository
     public async Task<Usuario?> ObtenerPorIdAsync(int id)
         => await _context.Usuarios.FindAsync(id);
 
-    public async Task<Usuario?> LoginAsync(string nombreUsuario, string contrasena)
-        => await _context.Usuarios.FirstOrDefaultAsync(u => u.Nombre_usuario == nombreUsuario && u.Contrasena == contrasena && u.Activo);
+    public async Task<Usuario?> LoginAsync(string email, string contrasena)
+        => await _context.Usuarios.FirstOrDefaultAsync(u => u.Nombre_usuario == email && u.Contrasena == contrasena && u.Activo);
+
+    public async Task<Usuario?> ObtenerPorEmailAsync(string email)
+        => await _context.Usuarios.FirstOrDefaultAsync(u => u.Nombre_usuario == email);
 
     public async Task<Usuario> InsertarAsync(Usuario usuario)
     {
