@@ -32,5 +32,21 @@ public class VehiculosController : ControllerBase
     {
         var vehiculos = await _useCases.ObtenerPorClienteAsync(idCliente);
         return Ok(vehiculos);
+
     }
+
+    [HttpGet("{matricula}/historial")]
+    public async Task<IActionResult> GetHistorial(string matricula)
+    {
+        var historial = await _useCases.ObtenerHistorial(matricula);
+        if (historial == null) return NotFound(new { mensaje = "No hay historial para esta matrícula." });
+        return Ok(historial);
+    }
+    [HttpGet("/api/garantias/verificar/{idVehiculo}")]
+    public async Task<ActionResult<GarantiaEstadoDTO>> VerificarGarantia(int idVehiculo)
+    {
+        var resultado = await _useCases.VerificarGarantiaAsync(idVehiculo);
+        return Ok(resultado);
+    }
+
 }

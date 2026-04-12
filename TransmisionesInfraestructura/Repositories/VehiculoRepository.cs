@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TransmisionesCore.Entities;
 using TransmisionesCore.Interfaces;
+using TransmisionesCore.UseCases;
 using TransmisionesInfraestructura.Data;
 
 namespace TransmisionesInfraestructura.Repositories;
@@ -27,4 +28,30 @@ public class VehiculoRepository : IVehiculoRepository
         await _context.SaveChangesAsync();
         return vehiculo;
     }
+
+    public async Task<HistorialVehiculoDTO?> ObtenerHistorialPorMatriculaAsync(string matricula)
+    {
+        return await _context.Vehiculos
+            .Include(v => v.Cliente)
+            .Where(v => v.Matricula == matricula)
+            .Select(v => new HistorialVehiculoDTO(
+                v.Matricula,
+                $"{v.Marca} {v.Modelo} ({v.Ano})",
+                $"{v.Cliente.Nombre_cliente} {v.Cliente.Apellido_cliente}",
+
+                _context.Ordenes
+                    .Where(o => o.Id_vehiculo == matricula) 
+                    .OrderByDescending(o => o.Fecha_orden)  
+                    .Select(o => new ServicioHistorialDTO(
+                        o.Id_orden,
+                        o.Fecha_orden,
+                        o.Tipo_orden, 
+                        "Servicio de Transmisión", 
+                        o.Total_orden ?? 0,
+                        o.Estado_orden
+                    )).ToList()
+            ))
+            .FirstOrDefaultAsync();
+    }
+
 }

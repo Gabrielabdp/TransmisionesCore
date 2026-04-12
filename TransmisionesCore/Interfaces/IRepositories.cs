@@ -1,5 +1,6 @@
 using TransmisionesCore.Entities;
 using TransmisionesCore.UseCases;
+using static TransmisionesCore.UseCases.ClienteUseCases;
 
 namespace TransmisionesCore.Interfaces;
 
@@ -9,16 +10,23 @@ public interface IClienteRepository
     Task<IEnumerable<Cliente>> ObtenerTodosAsync(string? buscar = null);
     Task<Cliente> InsertarAsync(Cliente cliente);
     Task ActualizarAsync(Cliente cliente);
+
+    Task<Cliente?> ObtenerPorDocumentoAsync(string documento);
+
+    Task<ClienteResumenDTO?> ObtenerResumenAsync(int id);
 }
 
 public interface IProductoRepository
 {
+
     Task<Producto?> ObtenerPorIdAsync(int id);
     Task<IEnumerable<Producto>> ObtenerTodosAsync(int? idCategoria = null, bool soloConStock = false);
     Task<Producto> InsertarAsync(Producto producto);
     Task ActualizarAsync(Producto producto);
-
     Task<int> AjustarInventarioAsync(AjustarStockRequest request);
+    Task<IEnumerable<ProductoFiltroDTO>> ObtenerPorCategoriaAsync(int idCategoria);
+    Task<IEnumerable<ProductoRankingDTO>> ObtenerRankingUsoAsync(int top = 10);
+    Task<IEnumerable<Producto>> ObtenerBajoStockDesdeSPAsync(int limite);
 }
 
 public interface IOrdenRepository
@@ -36,6 +44,7 @@ public interface IFacturaRepository
     Task<IEnumerable<Factura>> ObtenerTodosAsync(DateTime? desde = null, DateTime? hasta = null);
     Task<Factura> InsertarAsync(Factura factura);
     Task<string> GenerarNumeroFacturaAsync();
+    Task ActualizarAsync(Factura factura);
 }
 
 public interface ICajaRepository
@@ -43,6 +52,8 @@ public interface ICajaRepository
     Task<Caja?> ObtenerPorIdAsync(int id);
     Task<IEnumerable<Caja>> ObtenerTodosAsync(int? idSucursal = null);
     Task ActualizarAsync(Caja caja);
+    Task<decimal> ObtenerVentasDelDiaAsync(DateTime fecha);
+    Task<EstadoCajaDTO> ObtenerEstadoActualAsync(int id);
 }
 
 public interface IProveedorRepository
@@ -82,6 +93,7 @@ public interface IVehiculoRepository
     Task<Vehiculo?> ObtenerPorMatriculaAsync(string matricula);
     Task<IEnumerable<Vehiculo>> ObtenerPorClienteAsync(int idCliente);
     Task<Vehiculo> InsertarAsync(Vehiculo vehiculo);
+    Task<HistorialVehiculoDTO?> ObtenerHistorialPorMatriculaAsync(string matricula);
 }
 
 public interface IGarantiaRepository
@@ -102,6 +114,13 @@ public interface IServicioRepository
     Task<IEnumerable<Servicio>> ObtenerTodosAsync(bool soloActivos = true);
     Task<Servicio> InsertarAsync(Servicio servicio);
     Task ActualizarAsync(Servicio servicio);
+}
+
+public interface ILogRepository
+{
+    Task<IEnumerable<AuditoriaPrecioDTO>> ObtenerLogPreciosAsync();
+    Task<bool> RegistrarLogAsync(Log log);
+    
 }
 
 

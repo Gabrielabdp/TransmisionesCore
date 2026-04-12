@@ -48,4 +48,27 @@ public class ProductosController : ControllerBase
         }
 
     }
+
+    [HttpGet("categoria/{idCategoria}")]
+    public async Task<IActionResult> GetPorCategoria(int idCategoria)
+    {
+        var productos = await _useCases.FiltrarPorCategoriaAsync(idCategoria);
+        return Ok(productos);
+    }
+
+    [HttpPost("actualizar-precios")]
+    public async Task<IActionResult> ActualizarPreciosLote([FromBody] ActualizarPreciosLoteRequest request)
+    {
+        var exito = await _useCases.ActualizarPreciosEnLoteAsync(request);
+
+        if (!exito) return BadRequest(new { mensaje = "La lista de precios está vacía o es inválida." });
+
+        return Ok(new { mensaje = "Precios actualizados correctamente en el catálogo." });
+    }
+    [HttpGet("ranking-uso")]
+    public async Task<ActionResult<IEnumerable<ProductoRankingDTO>>> GetRankingUso()
+    {
+        var ranking = await _useCases.ObtenerRankingProductosAsync();
+        return Ok(ranking);
+    }
 }

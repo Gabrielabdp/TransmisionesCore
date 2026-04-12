@@ -36,6 +36,11 @@ public class FacturaRepository : IFacturaRepository
     public async Task<string> GenerarNumeroFacturaAsync()
     {
         var count = await _context.Facturas.CountAsync();
-        return $"FAC-{DateTime.Now:yyyyMMdd}-{count + 1:D4}";
+        return $"F-{DateTime.Now:yMdHm}";
+    }
+    public async Task ActualizarAsync(Factura factura)
+    {
+        _context.Facturas.Update(factura);
+        await _context.SaveChangesAsync();
     }
 }

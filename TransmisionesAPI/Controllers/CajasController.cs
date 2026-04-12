@@ -24,4 +24,33 @@ public class CajasController : ControllerBase
         await _useCases.CerrarCajaAsync(id, idUsuario);
         return Ok();
     }
+
+    [HttpGet("resumen-hoy")]
+    public async Task<IActionResult> GetResumenHoy()
+    {
+        try
+        {
+            var resumen = await _useCases.ObtenerResumenHoyAsync();
+            return Ok(resumen);
+        }
+        catch (Exception ex)
+        {
+            // Por si hay algún problema con la base de datos de Azure
+            return StatusCode(500, new { mensaje = "Error al obtener el resumen", detalle = ex.Message });
+        }
+
+    }
+
+    [HttpGet("{id}/estado-actual")]
+    public async Task<ActionResult<EstadoCajaDTO>> GetEstadoActual(int id)
+    {
+        var resultado = await _useCases.ObtenerEstadoActualAsync(id);
+
+        if (resultado == null)
+        {
+            return NotFound($"No se encontró la caja con ID {id}");
+        }
+
+        return Ok(resultado);
+    }
 }

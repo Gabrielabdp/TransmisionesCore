@@ -20,7 +20,7 @@ public class TransmisionesContext : DbContext
     public DbSet<Sucursal> Sucursales { get; set; }
     public DbSet<Empleado> Empleados { get; set; }
     public DbSet<Caja> Cajas { get; set; }
-    public DbSet<Producto> Productos { get; set; }
+    public DbSet<Producto> Productos { get; set; } 
     public DbSet<Servicio> Servicios { get; set; }
     public DbSet<Proveedor> Proveedores { get; set; }
     public DbSet<Cliente> Clientes { get; set; }

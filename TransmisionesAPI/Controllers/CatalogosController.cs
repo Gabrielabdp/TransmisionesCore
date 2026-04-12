@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TransmisionesCore.UseCases;
 using TransmisionesInfraestructura.Data; // Asegúrate de que este sea el namespace de tu Context
 
 namespace TransmisionesAPI.Controllers;
@@ -9,11 +10,12 @@ namespace TransmisionesAPI.Controllers;
 public class CatalogosController : ControllerBase
 {
     private readonly TransmisionesContext _context;
+    private readonly ProductoUseCases _productoUseCases;
 
-    // Inyectamos el contexto para poder consultar la base de datos de Azure
-    public CatalogosController(TransmisionesContext context)
+        public CatalogosController(TransmisionesContext context, ProductoUseCases productoUseCases)
     {
         _context = context;
+        _productoUseCases = productoUseCases;
     }
 
     [HttpGet("condiciones-pago")]
@@ -45,4 +47,11 @@ public class CatalogosController : ControllerBase
         new { Id = 1, Nombre = "Consumo (B02)" },
         new { Id = 2, Nombre = "Crédito Fiscal (B01)" }
         });
+
+    [HttpGet("bajo-stock")]
+    public async Task<IActionResult> GetBajoStock()
+    {
+        var alertas = await _productoUseCases.ObtenerAlertasStockAsync();
+        return Ok(alertas);
+    }
 }
