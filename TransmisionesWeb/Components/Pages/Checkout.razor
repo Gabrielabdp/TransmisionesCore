@@ -1,0 +1,99 @@
+@page "/checkout"
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg border-0 rounded-4">
+                <div class="card-header bg-primary text-white text-center py-4 rounded-top-4">
+                    <h2 class="fw-bold mb-0">Resumen de Orden 🧾</h2>
+                </div>
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <h5 class="text-muted border-bottom pb-2">Detalle del Servicio/Producto</h5>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="h4 fw-bold">@NombreItem</span>
+                            <span class="h4 text-primary fw-bold">RD$ @PrecioItem.ToString("N2")</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-4 rounded-3 mb-4">
+                        <h6 class="fw-bold mb-3">Información de Pago (Simulación)</h6>
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label small">Número de Tarjeta</label>
+                                <input type="text" class="form-control" placeholder="**** **** **** 1234" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Expiración</label>
+                                <input type="text" class="form-control" placeholder="MM/YY" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">CVV</label>
+                                <input type="text" class="form-control" placeholder="***" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal</span>
+                            <span>RD$ @((PrecioItem / 1.18m).ToString("N2"))</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>ITBIS (18%)</span>
+                            <span>RD$ @((PrecioItem - (PrecioItem / 1.18m)).ToString("N2"))</span>
+                        </div>
+                        <div class="d-flex justify-content-between mt-3">
+                            <span class="h3 fw-bold">Total a Pagar</span>
+                            <span class="h3 fw-bold text-success">RD$ @PrecioItem.ToString("N2")</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 d-grid gap-2">
+                        @if (!pagado)
+                        {
+                            <button class="btn btn-success btn-lg py-3 fw-bold rounded-pill shadow" @onclick="ProcesarPago">
+                                Confirmar y Pagar
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="alert alert-success text-center py-4 rounded-4 shadow-sm">
+                                <h4 class="fw-bold">¡Pago Exitoso! ✅</h4>
+                                <p class="mb-0">Tu factura #FAC-@RandomId ha sido generada y enviada a tu correo.</p>
+                                <button class="btn btn-outline-success mt-3 rounded-pill" @onclick='() => Navigation.NavigateTo("/")'>Volver al Inicio</button>
+                            </div>
+                        }
+                        <button class="btn btn-link text-muted" @onclick='() => Navigation.NavigateTo("/catalogo")'>Cancelar y volver al catálogo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string Nombre { get; set; } = "Servicio General";
+
+    [SupplyParameterFromQuery]
+    public string Precio { get; set; } = "0";
+
+    private string NombreItem => Nombre;
+    private decimal PrecioItem => decimal.TryParse(Precio, out var p) ? p : 0;
+    private int RandomId = new Random().Next(1000, 9999);
+    private bool pagado = false;
+
+    private void ProcesarPago()
+    {
+        pagado = true;
+    }
+}
+
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+</style>

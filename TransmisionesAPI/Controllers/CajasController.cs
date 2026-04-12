@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TransmisionesCore.UseCases;
 
-
 namespace TransmisionesAPI.Controllers;
 
 [ApiController]
@@ -19,9 +18,9 @@ public class CajasController : ControllerBase
     }
 
     [HttpPost("{id}/cerrar")]
-    public async Task<IActionResult> Cerrar(int id, int idUsuario)
+    public async Task<IActionResult> Cerrar(int id, int idUsuario, decimal saldoFinal)
     {
-        await _useCases.CerrarCajaAsync(id, idUsuario);
+        await _useCases.CerrarCajaAsync(id, idUsuario, saldoFinal);
         return Ok();
     }
 }

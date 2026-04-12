@@ -116,3 +116,11 @@ public class CerrarCajaIntegracionDto
     public int IdUsuario { get; set; }
     public decimal SaldoFinal { get; set; }
 }
+
+public class RegistrarMovimientoDto
+{
+    public int IdUsuario { get; set; }
+    public decimal Monto { get; set; }
+    public string Tipo { get; set; } = "Entrada";
+    public string Motivo { get; set; } = string.Empty;
+}

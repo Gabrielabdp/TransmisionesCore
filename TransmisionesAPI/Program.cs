@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using TransmisionesAPI;
 using TransmisionesCore.Interfaces;
 using TransmisionesCore.UseCases;
+using TransmisionesCore.Services;
 using TransmisionesInfraestructura.Data;
 using TransmisionesInfraestructura.Repositories;
 using TransmisionesInfraestructura.Services;
@@ -15,7 +16,7 @@ builder.Services.AddScoped<ILogService, LogService>();
 // Agrega sercicios al contenerdor.
 builder.Services.AddControllers().AddJsonOptions(options =>
  {
-     // Esto corta el ciclo infinito en la serialización
+     // Esto corta el ciclo infinito en la serializaciï¿½n
      options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
  });
 builder.Services.AddEndpointsApiExplorer();
@@ -25,7 +26,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<TransmisionesContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
     sqlOptions => {
-        // Esto evita que la app se rinda si Azure tarda en responder
+        // Esto activa los reintentos automÃ¡ticos si Azure falla momentÃ¡neamente
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
         sqlOptions.CommandTimeout(60);
     }));
 
@@ -43,6 +48,7 @@ builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 
 // Use Cases
 builder.Services.AddScoped<AutenticacionUseCase>();
+builder.Services.AddScoped<UsuarioUseCases>();
 builder.Services.AddScoped<OrdenUseCases>();
 builder.Services.AddScoped<ClienteUseCases>();
 builder.Services.AddScoped<ProductoUseCases>();
@@ -74,7 +80,12 @@ app.MapControllers();
 
 // Test Endpoint
 // Test Endpoint para validar Relaciones del Core
-app.MapPruebasDb(); // <--- Solo esta línea limpia
+app.MapPruebasDb(); // <--- Solo esta lï¿½nea limpia
+
+app.Run();
+
+
+MapPruebasDb(); // <--- Solo esta lï¿½nea limpia
 
 app.Run();
 

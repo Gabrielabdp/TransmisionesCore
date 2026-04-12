@@ -43,6 +43,7 @@ public interface ICajaRepository
     Task<Caja?> ObtenerPorIdAsync(int id);
     Task<IEnumerable<Caja>> ObtenerTodosAsync(int? idSucursal = null);
     Task ActualizarAsync(Caja caja);
+    Task RegistrarMovimientoAsync(MovimientoCaja movimiento);
 }
 
 public interface IProveedorRepository
@@ -72,7 +73,8 @@ public interface IEmpleadoRepository
 public interface IUsuarioRepository
 {
     Task<Usuario?> ObtenerPorIdAsync(int id);
-    Task<Usuario?> LoginAsync(string nombreUsuario, string contrasena);
+    Task<Usuario?> ObtenerPorEmailAsync(string email);
+    Task<Usuario?> LoginAsync(string email, string contrasena);
     Task<Usuario> InsertarAsync(Usuario usuario);
     Task ActualizarAsync(Usuario usuario);
 }

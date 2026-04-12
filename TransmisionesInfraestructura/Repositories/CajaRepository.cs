@@ -27,4 +27,10 @@ public class CajaRepository : ICajaRepository
         _context.Cajas.Update(caja);
         await _context.SaveChangesAsync();
     }
+
+    public async Task RegistrarMovimientoAsync(MovimientoCaja movimiento)
+    {
+        _context.MovimientosCaja.Add(movimiento);
+        await _context.SaveChangesAsync();
+    }
 }

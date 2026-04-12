@@ -1,0 +1,46 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar shadow-sm">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 shadow-sm bg-white d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 text-muted small">Panel de Control - Transmisiones MAG</h5>
+            <div class="user-pill p-1 px-3 bg-light rounded-pill border d-flex align-items-center">
+                <i class="bi bi-person-circle me-2"></i>
+                <span class="small fw-bold">Invitado</span>
+            </div>
+        </div>
+
+        <article class="content px-4 py-3">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+<style>
+    .top-row {
+        height: 60px;
+        background-color: white !important;
+        border-bottom: 1px solid #eee;
+    }
+    .user-pill {
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .user-pill:hover {
+        background-color: #e9ecef !important;
+    }
+    .sidebar {
+        background-image: linear-gradient(180deg, #1a1c1e 0%, #2c3e50 100%) !important;
+        width: 250px;
+    }
+</style>

@@ -1,0 +1,249 @@
+@page "/perfil"
+@using TransmisionesCore.Entities
+@using System.Net.Http.Json
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+<div class="container py-5">
+    <div class="row">
+        <!-- Columna Izquierda: Datos del Cliente -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body text-center p-4">
+                    <div class="profile-avatar mb-3">
+                        <i class="bi bi-person-circle display-1 text-primary"></i>
+                    </div>
+                    <h3 class="fw-bold">@NombreCliente</h3>
+                    <p class="text-muted">@CorreoCliente</p>
+                    <span class="badge bg-primary rounded-pill px-3">Cliente VIP</span>
+                    <hr class="my-4">
+                    <div class="text-start">
+                        <p class="small mb-1 text-muted">Teléfono</p>
+                        <p class="fw-bold">@TelefonoCliente</p>
+                        <p class="small mb-1 text-muted">Ubicación</p>
+                        <p class="fw-bold">Santo Domingo, RD</p>
+                    </div>
+                    <button class="btn btn-outline-primary w-100 mt-3 rounded-pill">Editar Perfil</button>
+                </div>
+            </div>
+
+            <!-- Card Mis Vehículos -->
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Mis Vehículos 🚗</h5>
+                        @if (cargandoVehiculos) { <span class="spinner-border spinner-border-sm text-primary"></span> }
+                    </div>
+
+                    @if (Vehiculos.Any())
+                    {
+                        @foreach (var v in Vehiculos)
+                        {
+                            <div class="d-flex align-items-center mb-3 p-2 bg-light rounded-3 border-start border-primary border-4">
+                                <div class="flex-shrink-0 me-3">
+                                    <i class="bi bi-car-front-fill fs-3 text-primary"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <p class="mb-0 fw-bold">@v.Marca @v.Modelo (@v.Anio)</p>
+                                    <small class="text-muted">Placa: <span class="badge bg-dark">@v.Matricula</span></small>
+                                </div>
+                                <button class="btn btn-sm btn-link text-danger" @onclick="() => EliminarVehiculo(v.Matricula)"><i class="bi bi-trash"></i></button>
+                            </div>
+                        }
+                    }
+                    else if (!cargandoVehiculos)
+                    {
+                        <div class="alert alert-info py-2 small">No tiene vehículos registrados.</div>
+                    }
+
+                    <button class="btn btn-primary w-100 rounded-pill mt-2" @onclick="MostrarModalVehiculo">
+                        <i class="bi bi-plus-circle me-2"></i>Agregar Vehículo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Historial -->
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white border-0 p-4">
+                    <h4 class="fw-bold mb-0">Historial de Servicios ⚙️</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4">Fecha</th>
+                                    <th>Servicio</th>
+                                    <th>Factura</th>
+                                    <th>Total</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="pe-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var h in Historial)
+                                {
+                                    <tr>
+                                        <td class="ps-4 text-muted small">@h.Fecha.ToShortDateString()</td>
+                                        <td>
+                                            <p class="mb-0 fw-bold">@h.Servicio</p>
+                                            <small class="text-muted">Vehículo: @h.Vehiculo</small>
+                                        </td>
+                                        <td class="font-monospace small">@h.NoFactura</td>
+                                        <td class="fw-bold text-primary">RD$ @h.Monto.ToString("N2")</td>
+                                        <td class="text-center">
+                                            <span class="badge bg-success-subtle text-success rounded-pill px-3">Completado</span>
+                                        </td>
+                                        <td class="pe-4 text-end">
+                                            <button class="btn btn-sm btn-light rounded-circle"><i class="bi bi-download"></i></button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Agregar Vehículo (Simulado con lógica Blazor) -->
+@if (mostrarModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header border-0 bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Nuevo Vehículo</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Matrícula (Placa)</label>
+                            <input type="text" class="form-control rounded-3" @bind="nuevoVehiculo.Matricula" placeholder="A123456" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Año</label>
+                            <input type="number" class="form-control rounded-3" @bind="nuevoVehiculo.Anio" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Marca</label>
+                            <input type="text" class="form-control rounded-3" @bind="nuevoVehiculo.Marca" placeholder="Toyota, Honda..." />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Modelo</label>
+                            <input type="text" class="form-control rounded-3" @bind="nuevoVehiculo.Modelo" placeholder="Camry, Civic..." />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold">Color</label>
+                            <input type="text" class="form-control rounded-3" @bind="nuevoVehiculo.Color" placeholder="Gris, Rojo, Blanco..." />
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(errorMensaje))
+                    {
+                        <div class="alert alert-danger mt-3 small">@errorMensaje</div>
+                    }
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" @onclick="CerrarModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4" @onclick="GuardarVehiculo" disabled="@guardando">
+                        @if (guardando) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        Guardar Vehículo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string NombreCliente = "Juan Pérez";
+    private string CorreoCliente = "cliente@mag.com";
+    private string TelefonoCliente = "(809) 555-0123";
+
+    private List<Vehiculo> Vehiculos = new();
+    private bool cargandoVehiculos = true;
+    private bool mostrarModal = false;
+    private bool guardando = false;
+    private string errorMensaje = "";
+    private Vehiculo nuevoVehiculo = new() { Id_cliente = 1, Id_tipo_trans = 1 }; // Default IDs para prototipo
+
+    private List<HistorialInfo> Historial = new()
+    {
+        new() { Fecha = DateTime.Now.AddDays(-15), Servicio = "Cambio de Aceite ATF", Vehiculo = "Toyota Camry", NoFactura = "FAC-20260408-0012", Monto = 3500 },
+        new() { Fecha = DateTime.Now.AddMonths(-2), Servicio = "Diagnóstico Computarizado", Vehiculo = "Honda CR-V", NoFactura = "FAC-20260215-0045", Monto = 1500 }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarVehiculos();
+    }
+
+    private async Task CargarVehiculos()
+    {
+        try 
+        {
+            cargandoVehiculos = true;
+            Vehiculos = await Http.GetFromJsonAsync<List<Vehiculo>>($"api/vehiculos/cliente/1") ?? new();
+        }
+        catch { /* Fallback si la API no está lista */ }
+        finally { cargandoVehiculos = false; }
+    }
+
+    private void MostrarModalVehiculo()
+    {
+        nuevoVehiculo = new Vehiculo { Id_cliente = 1, Id_tipo_trans = 1, Anio = (short)DateTime.Now.Year };
+        errorMensaje = "";
+        mostrarModal = true;
+    }
+
+    private void CerrarModal() => mostrarModal = false;
+
+    private async Task GuardarVehiculo()
+    {
+        if (string.IsNullOrEmpty(nuevoVehiculo.Matricula) || string.IsNullOrEmpty(nuevoVehiculo.Marca))
+        {
+            errorMensaje = "Matrícula y Marca son campos obligatorios.";
+            return;
+        }
+
+        try 
+        {
+            guardando = true;
+            var response = await Http.PostAsJsonAsync("api/vehiculos", nuevoVehiculo);
+            if (response.IsSuccessStatusCode)
+            {
+                await CargarVehiculos();
+                CerrarModal();
+            }
+            else 
+            {
+                errorMensaje = "Error al guardar el vehículo. Intente nuevamente.";
+            }
+        }
+        catch (Exception ex) 
+        {
+            errorMensaje = "Error de conexión: " + ex.Message;
+        }
+        finally { guardando = false; }
+    }
+
+    private async Task EliminarVehiculo(string matricula)
+    {
+        // Lógica de eliminación opcional
+        if (await Task.FromResult(true)) // Simulación de confirmación
+        {
+            try {
+                await Http.DeleteAsync($"api/vehiculos/{matricula}");
+                await CargarVehiculos();
+            } catch { }
+        }
+    }
+
+    public class HistorialInfo { public DateTime Fecha { get; set; } public string Servicio { get; set; } = ""; public string Vehiculo { get; set; } = ""; public string NoFactura { get; set; } = ""; public decimal Monto { get; set; } }
+}

@@ -1,0 +1,260 @@
+@page "/empleado/caja"
+@using TransmisionesCore.Entities
+@using System.Net.Http.Json
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+<div class="container-fluid bg-dark vh-100 p-0 text-white overflow-hidden">
+    <!-- Barra Superior de Caja -->
+    <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary bg-black">
+        <h4 class="mb-0 fw-bold"><i class="bi bi-pc-display me-2 text-warning"></i> TERMINAL DE CAJA - TRANSMISIONES MAG</h4>
+        <div class="d-flex align-items-center">
+            @if (cargando) { <span class="spinner-border spinner-border-sm me-3 text-warning"></span> }
+            <span class="badge bg-success me-3">CAJA ABIERTA</span>
+            <span class="text-white-50 me-3">Cajero: EMP-001</span>
+            <button class="btn btn-sm btn-outline-danger" @onclick='() => Navigation.NavigateTo("/")'>Salir</button>
+        </div>
+    </div>
+
+    <div class="row g-0 h-75">
+        <!-- Columna Izquierda: Carrito de Venta -->
+        <div class="col-md-8 p-4 bg-dark h-100 overflow-auto">
+            <div class="card bg-secondary bg-opacity-25 border-secondary rounded-4 h-100">
+                <div class="card-header bg-transparent border-secondary py-3">
+                    <div class="row g-2">
+                        <div class="col">
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-search"></i></span>
+                                <input type="text" class="form-control bg-dark border-secondary text-white" @bind="busqueda" @bind:event="oninput" placeholder="Buscar en inventario..." />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(busqueda) && productosFiltrados.Any())
+                    {
+                        <div class="list-group mt-2 position-absolute shadow-lg w-75" style="z-index: 1000;">
+                            @foreach (var p in productosFiltrados.Take(5))
+                            {
+                                <button class="list-group-item list-group-item-action bg-dark text-white border-secondary" @onclick="() => AgregarAlCarrito(p)">
+                                    <div class="d-flex justify-content-between">
+                                        <span>@p.Descripcion_producto</span>
+                                        <span class="text-warning">RD$ @p.Precio_unitario.ToString("N2")</span>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-dark table-hover mb-0">
+                        <thead class="text-white-50 small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Item</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">Precio</th>
+                                <th class="text-end pe-4">Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Carrito)
+                            {
+                                <tr>
+                                    <td class="ps-4">@item.Nombre</td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-secondary py-0" @onclick="() => item.Cantidad--">-</button>
+                                        <span class="mx-2">@item.Cantidad</span>
+                                        <button class="btn btn-sm btn-outline-secondary py-0" @onclick="() => item.Cantidad++">+</button>
+                                    </td>
+                                    <td class="text-end">RD$ @item.Precio.ToString("N2")</td>
+                                    <td class="text-end pe-4 fw-bold text-info">RD$ @(item.Total.ToString("N2"))</td>
+                                    <td><button class="btn btn-sm btn-link text-danger p-0" @onclick="() => Carrito.Remove(item)"><i class="bi bi-trash"></i></button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Controles de Pago -->
+        <div class="col-md-4 p-4 bg-black h-100 border-start border-secondary">
+            <div class="d-flex flex-column h-100 justify-content-between">
+                <div>
+                    <h5 class="text-warning fw-bold mb-4">RESUMEN DE VENTA</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-white-50 small">Subtotal:</span>
+                        <span>RD$ @(Subtotal.ToString("N2"))</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-white-50 small">ITBIS (18%):</span>
+                        <span>RD$ @(Itbis.ToString("N2"))</span>
+                    </div>
+                    <hr class="border-secondary my-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h4 fw-bold">TOTAL:</span>
+                        <span class="h2 fw-bold text-success">RD$ @(Total.ToString("N2"))</span>
+                    </div>
+                </div>
+
+                <div>
+                    @if (ventaExitosa)
+                    {
+                        <div class="alert alert-success border-0 rounded-4 shadow mb-4">
+                            <h6 class="fw-bold"><i class="bi bi-check-circle-fill me-2"></i> ¡Cobro Realizado!</h6>
+                            <small>Factura enviada al correo del cliente.</small>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(mensajeError))
+                    {
+                        <div class="alert alert-danger border-0 rounded-4 shadow mb-4">
+                            <h6 class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i> Error</h6>
+                            <small>@mensajeError</small>
+                        </div>
+                    }
+                    
+                    <button class="btn btn-success btn-lg w-100 py-4 fw-bold shadow-lg rounded-4 mb-3" @onclick="Cobrar" disabled="@(!Carrito.Any() || cargando)">
+                        @if (cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        <i class="bi bi-printer me-2"></i> COBRAR E IMPRIMIR
+                    </button>
+                    <button class="btn btn-outline-secondary w-100 rounded-pill" @onclick="() => Carrito.Clear()">Limpiar Carrito</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<VentaItem> Carrito = new();
+    private List<Producto> Inventario = new();
+    private string busqueda = "";
+    private bool cargando = false;
+    private bool ventaExitosa = false;
+
+    private IEnumerable<Producto> productosFiltrados => 
+        Inventario.Where(p => p.Descripcion_producto.Contains(busqueda, StringComparison.OrdinalIgnoreCase));
+
+    private decimal Subtotal => Carrito.Sum(x => x.Total);
+    private decimal Itbis => Subtotal * 0.18m;
+    private decimal Total => Subtotal + Itbis;
+
+    private bool cajaAbierta = true; // Por defecto asumimos abierta para el prototipo
+    private bool mostrarModalApertura = false;
+    private bool mostrarModalCierre = false;
+    private decimal montoInicial = 0;
+    private decimal montoFinalReal = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarInventario();
+        await VerificarEstadoCaja();
+    }
+
+    private async Task VerificarEstadoCaja()
+    {
+        // En un escenario real, llamaríamos a api/cajas/1 para ver su estado
+        // Por ahora, simularemos que si no hay un turno iniciado, pedimos apertura.
+        mostrarModalApertura = !cajaAbierta;
+    }
+
+    private async Task AbrirCaja()
+    {
+        try {
+            cargando = true;
+            var res = await Http.PostAsJsonAsync($"api/cajas/1/abrir?idUsuario=1&saldoInicial={montoInicial}", new { });
+            if (res.IsSuccessStatusCode) {
+                cajaAbierta = true;
+                mostrarModalApertura = false;
+            }
+        } finally { cargando = false; }
+    }
+
+    private async Task CerrarCaja()
+    {
+        try {
+            cargando = true;
+            var res = await Http.PostAsJsonAsync($"api/cajas/1/cerrar?idUsuario=1&saldoFinal={montoFinalReal}", new { });
+            if (res.IsSuccessStatusCode) {
+                cajaAbierta = false;
+                Navigation.NavigateTo("/");
+            }
+        } finally { cargando = false; }
+    }
+
+    private void MostrarModalCierre() => mostrarModalCierre = true;
+
+    private async Task CargarInventario()
+    {
+        try {
+            cargando = true;
+            Inventario = await Http.GetFromJsonAsync<List<Producto>>("api/productos") ?? new();
+        } catch { /* Manejar error de conexión */ }
+        finally { cargando = false; }
+    }
+
+    private void AgregarAlCarrito(Producto p)
+    {
+        var existente = Carrito.FirstOrDefault(x => x.Id == p.Id_producto);
+        if (existente != null) existente.Cantidad++;
+        else Carrito.Add(new VentaItem { Id = p.Id_producto, Nombre = p.Descripcion_producto, Cantidad = 1, Precio = p.Precio_unitario });
+        busqueda = "";
+    }
+
+    private async Task Cobrar()
+    {
+        cargando = true;
+        ventaExitosa = false;
+        
+        // Simulación de llamada a la API de Facturación que creamos
+        // await Http.PostAsJsonAsync("api/facturas/emitir", new { ... });
+        
+        await Task.Delay(1000); // Simulamos la red
+        ventaExitosa = true;
+        Carrito.Clear();
+        cargando = false;
+    }
+
+    public class VentaItem
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = "";
+        public int Cantidad { get; set; }
+        public decimal Precio { get; set; }
+        public decimal Total => Cantidad * Precio;
+    }
+}
+
+<style>
+    .table-dark {
+        --bs-table-bg: transparent;
+    }
+</style>
+
+        }
+        catch (Exception ex)
+        {
+            mensajeError = "Error de sistema: " + ex.Message;
+        }
+        finally 
+        {
+            cargando = false;
+        }
+    }
+
+    public class VentaItem
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = "";
+        public int Cantidad { get; set; }
+        public decimal Precio { get; set; }
+        public decimal Total => Cantidad * Precio;
+    }
+}
+
+<style>
+    .table-dark {
+        --bs-table-bg: transparent;
+    }
+</style>
