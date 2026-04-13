@@ -123,6 +123,113 @@ namespace TransmisionesIntegracion.Services
                     }
                 }
 
+                // === 4. CLONAR SERVICIOS ===
+                var resServicios = await cliente.GetAsync("https://localhost:56678/api/Servicios");
+                if (resServicios.IsSuccessStatusCode)
+                {
+                    var json = await resServicios.Content.ReadAsStringAsync();
+                    using JsonDocument doc = JsonDocument.Parse(json);
+                    context.ServiciosCache.RemoveRange(context.ServiciosCache); // Limpiamos vitrina
+
+                    foreach (var element in doc.RootElement.EnumerateArray())
+                    {
+                        context.ServiciosCache.Add(new ServicioCache
+                        {
+                            Id = element.GetProperty("id_servicio").GetInt32(),
+                            Nombre = element.GetProperty("nombre_servicio").GetString() ?? "",
+                            PrecioBase = element.GetProperty("precio_base").GetDecimal()
+                        });
+                    }
+                }
+
+                // === 5. CLONAR CATÁLOGOS (Condiciones de Pago) ===
+                var resCondPago = await cliente.GetAsync("https://localhost:56678/api/Catalogos/condiciones-pago");
+                if (resCondPago.IsSuccessStatusCode)
+                {
+                    var json = await resCondPago.Content.ReadAsStringAsync();
+                    using JsonDocument doc = JsonDocument.Parse(json);
+                    context.CondicionesPagoCache.RemoveRange(context.CondicionesPagoCache);
+
+                    foreach (var element in doc.RootElement.EnumerateArray())
+                    {
+                        context.CondicionesPagoCache.Add(new CondicionPagoCache
+                        {
+                            Id = element.GetProperty("id_condicion_pago").GetInt32(),
+                            Descripcion = element.GetProperty("descripcion").GetString() ?? "",
+                            Plazo = element.GetProperty("plazo").GetInt32()
+                        });
+                    }
+                }
+
+                // === 6. CLONAR CATÁLOGOS (Provincias y Municipios) ===
+                var resProv = await cliente.GetAsync("https://localhost:56678/api/Catalogos/provincias");
+                if (resProv.IsSuccessStatusCode)
+                {
+                    var jsonProv = await resProv.Content.ReadAsStringAsync();
+                    using JsonDocument docProv = JsonDocument.Parse(jsonProv);
+
+                    context.ProvinciasCache.RemoveRange(context.ProvinciasCache);
+                    context.MunicipiosCache.RemoveRange(context.MunicipiosCache);
+
+                    foreach (var element in docProv.RootElement.EnumerateArray())
+                    {
+                        int idProv = element.GetProperty("id_provincia").GetInt32();
+                        context.ProvinciasCache.Add(new ProvinciaCache
+                        {
+                            Id = idProv,
+                            Nombre = element.GetProperty("nombre_provincia").GetString() ?? ""
+                        });
+
+                        // Hacemos el fetch de los municipios de esa provincia
+                        var resMuni = await cliente.GetAsync($"https://localhost:56678/api/Catalogos/municipios/{idProv}");
+                        if (resMuni.IsSuccessStatusCode)
+                        {
+                            var jsonMuni = await resMuni.Content.ReadAsStringAsync();
+                            using JsonDocument docMuni = JsonDocument.Parse(jsonMuni);
+                            foreach (var m in docMuni.RootElement.EnumerateArray())
+                            {
+                                context.MunicipiosCache.Add(new MunicipioCache
+                                {
+                                    Id = m.GetProperty("id_municipio").GetInt32(),
+                                    Nombre = m.GetProperty("nombre_municipio").GetString() ?? "",
+                                    IdProvincia = idProv
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // === 7. CLONAR EMPLEADOS Y USUARIOS ===
+                var resEmpleados = await cliente.GetAsync("https://localhost:56678/api/Empleados");
+                if (resEmpleados.IsSuccessStatusCode)
+                {
+                    var jsonEmp = await resEmpleados.Content.ReadAsStringAsync();
+                    using JsonDocument docEmp = JsonDocument.Parse(jsonEmp);
+
+                    context.EmpleadosCache.RemoveRange(context.EmpleadosCache); // Limpiamos vitrina
+
+                    foreach (var element in docEmp.RootElement.EnumerateArray())
+                    {
+                        // Revisamos si este empleado tiene un usuario de sistema asociado
+                        var propUsuario = element.GetProperty("usuario");
+                        bool tieneUsuario = propUsuario.ValueKind != JsonValueKind.Null;
+
+                        context.EmpleadosCache.Add(new EmpleadoCache
+                        {
+                            Id = element.GetProperty("id_empleado").GetInt32(),
+                            NombreCompleto = $"{element.GetProperty("nombre").GetString()} {element.GetProperty("apellido").GetString()}",
+                            Cedula = element.GetProperty("cedula").GetString() ?? "",
+                            Activo = element.GetProperty("activo").GetBoolean(),
+
+                            // Datos para el Login Offline
+                            IdUsuario = tieneUsuario ? propUsuario.GetProperty("id_usuario").GetInt32() : null,
+                            UsuarioAcceso = tieneUsuario ? propUsuario.GetProperty("nombre_usuario").GetString() ?? "" : "",
+                            PasswordHash = tieneUsuario ? propUsuario.GetProperty("contrasena").GetString() ?? "" : "",
+                            Rol = tieneUsuario ? propUsuario.GetProperty("rol").GetString() ?? "" : ""
+                        });
+                    }
+                }
+
                 // Guardamos todo el clonaje en SQLite
                 await context.SaveChangesAsync();
             }
@@ -398,6 +505,63 @@ namespace TransmisionesIntegracion.Services
                         var respuesta = await cliente.PostAsync(urlCore, null);
 
                         if (respuesta.IsSuccessStatusCode || respuesta.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                    }
+
+                    else if (transaccion.TipoTransaccion == "NuevoEmpleado")
+                    {
+                        var urlCore = "https://localhost:56678/api/Empleados";
+                        var jsonContent = new StringContent(transaccion.DatosJson, Encoding.UTF8, "application/json");
+
+                        var respuesta = await cliente.PostAsync(urlCore, jsonContent);
+
+                        if (respuesta.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                        else
+                        {
+                            var mensajeError = await respuesta.Content.ReadAsStringAsync();
+                            if (mensajeError.Contains("ya existe") || mensajeError.Contains("FOREIGN KEY"))
+                            {
+                                exitoAlEnviar = true;
+                            }
+                        }
+                    }
+                    else if (transaccion.TipoTransaccion == "NuevoVehiculo")
+                    {
+                        var urlCore = "https://localhost:56678/api/Vehiculos";
+                        var jsonContent = new StringContent(transaccion.DatosJson, Encoding.UTF8, "application/json");
+
+                        var respuesta = await cliente.PostAsync(urlCore, jsonContent);
+
+                        if (respuesta.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                        else
+                        {
+                            if (respuesta.StatusCode == System.Net.HttpStatusCode.BadRequest || await respuesta.Content.ReadAsStringAsync() is var msg && msg.Contains("FOREIGN KEY"))
+                            {
+                                exitoAlEnviar = true;
+                            }
+                        }
+                    }
+
+                    else if (transaccion.TipoTransaccion == "AjustarStockProducto")
+                    {
+                        var urlCore = "https://localhost:56678/api/Productos/ajustar-stock";
+                        var jsonContent = new StringContent(transaccion.DatosJson, Encoding.UTF8, "application/json");
+
+                        var respuesta = await cliente.PostAsync(urlCore, jsonContent);
+
+                        if (respuesta.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                        else if (respuesta.StatusCode == System.Net.HttpStatusCode.BadRequest)
                         {
                             exitoAlEnviar = true;
                         }
