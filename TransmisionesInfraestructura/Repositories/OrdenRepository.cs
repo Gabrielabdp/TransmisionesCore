@@ -26,7 +26,7 @@ public class OrdenRepository : IOrdenRepository
         return await query.ToListAsync();
     }
     public async Task<IEnumerable<Orden>> ObtenerCotizacionesAsync(int? idCliente = null)
-    { 
+    {
         var query = _context.Ordenes.Where(o => o.Tipo_orden == "Cotizacion");
 
         if (idCliente.HasValue)
@@ -49,4 +49,5 @@ public class OrdenRepository : IOrdenRepository
         _context.Ordenes.Update(orden);
         await _context.SaveChangesAsync();
     }
+
 }

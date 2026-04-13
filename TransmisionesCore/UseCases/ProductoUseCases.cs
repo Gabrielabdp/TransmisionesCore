@@ -50,4 +50,43 @@ public class ProductoUseCases
         // Usamos _repo que es el nombre que definiste arriba
         return await _repo.AjustarInventarioAsync(req);
     }
+
+    public async Task<IEnumerable<ProductoFiltroDTO>> FiltrarPorCategoriaAsync(int id)
+    {
+        return await _repo.ObtenerPorCategoriaAsync(id);
+    }
+
+    public async Task<bool> ActualizarPreciosEnLoteAsync(ActualizarPreciosLoteRequest request)
+    {
+        if (request.Precios == null || !request.Precios.Any()) return false;
+
+        foreach (var item in request.Precios)
+        {
+            var producto = await _repo.ObtenerPorIdAsync(item.IdProducto);
+            if (producto != null)
+            {
+                producto.Precio_unitario= item.NuevoPrecio;
+                await _repo.ActualizarAsync(producto);
+            }
+        }
+        return true;
+    }
+    public async Task<IEnumerable<ProductoRankingDTO>> ObtenerRankingProductosAsync()
+    {
+        
+        return await _repo.ObtenerRankingUsoAsync(10);
+    }
+
+    public async Task<IEnumerable<ProductoBajoStockDTO>> ObtenerAlertasStockAsync()
+    {
+        var productosBajoStock = await _repo.ObtenerBajoStockDesdeSPAsync(5);
+
+        return productosBajoStock.Select(p => new ProductoBajoStockDTO(
+            p.Id_producto,
+            p.Descripcion_producto,
+            p.Stock_actual,
+            5, 
+            "Alerta: Stock crítico detectado por el sistema."
+        )).ToList();
+    }
 }

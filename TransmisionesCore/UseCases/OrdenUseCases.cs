@@ -9,12 +9,16 @@ public class OrdenUseCases
     private readonly IOrdenRepository _ordenRepo;
     private readonly IProductoRepository _productoRepo;
     private readonly IClienteRepository _clienteRepo;
+    private readonly IEmpleadoRepository _empleadoRepo;
+    private readonly IFacturaRepository _facturaRepo;
 
-    public OrdenUseCases(IOrdenRepository ordenRepo, IProductoRepository productoRepo, IClienteRepository clienteRepo)
+    public OrdenUseCases(IOrdenRepository ordenRepo, IProductoRepository productoRepo, IClienteRepository clienteRepo, IEmpleadoRepository empleadoRepo, IFacturaRepository facturaRepo)
     {
         _ordenRepo    = ordenRepo;
         _productoRepo = productoRepo;
         _clienteRepo  = clienteRepo;
+        _empleadoRepo = empleadoRepo;
+        _facturaRepo = facturaRepo;
     }
 
     public async Task<Orden> CrearOrdenAsync(CrearOrdenRequest req)
@@ -142,4 +146,93 @@ public class OrdenUseCases
 
     public async Task<IEnumerable<Orden>> ObtenerOrdenesAsync(string? estado = null, int? idCliente = null)
         => await _ordenRepo.ObtenerTodosAsync(estado, idCliente);
+
+    // ... otros métodos (Crear, AgregarProducto, etc) ...
+
+    public async Task<bool> AprobarCotizacionAsync(int id)
+    {
+        var orden = await _ordenRepo.ObtenerPorIdAsync(id);
+
+        if (orden == null) return false;
+
+        // Validación de tu entidad
+        if (!orden.PuedeConfirmarse())
+        {
+            throw new OrdenNoConfirmableException(id);
+        }
+
+        // Cambio de estado
+        orden.Estado_orden = "Aprobada";
+
+        // Aquí aplicamos el ajuste:
+        await _ordenRepo.ActualizarAsync(orden);
+        return true;
+    }
+
+    public async Task<bool> AsignarEmpleadoAsync(int idOrden, int idEmpleado)
+    {
+        var orden = await _ordenRepo.ObtenerPorIdAsync(idOrden);
+        if (orden == null) return false;
+
+        var empleado = await _empleadoRepo.ObtenerPorIdAsync(idEmpleado);
+        if (empleado == null)
+            throw new EntidadNoEncontradaException("Empleado", idEmpleado);
+
+        orden.Id_empleado = idEmpleado;
+
+        await _ordenRepo.ActualizarAsync(orden);
+        return true;
+    }
+
+    public async Task<Factura> ConvertirAFacturaAsync(int idOrden)
+    {
+        var orden = await _ordenRepo.ObtenerPorIdAsync(idOrden);
+        if (orden == null) throw new EntidadNoEncontradaException("Orden", idOrden);
+
+
+        if (orden.Estado_orden == "Facturada")
+            throw new DomainException("Esta orden ya ha sido convertida a factura.");
+
+        var nuevaFactura = new Factura
+        {
+            Id_orden = orden.Id_orden,
+            Id_cliente = orden.Id_cliente,
+            Id_empleado = orden.Id_empleado,
+            Numero_factura = $"FAC-{DateTime.Now}",
+            Fecha_factura = DateTime.UtcNow,
+            SubTotal = orden.Total_orden,
+            ITBIS = (orden.Total_orden ?? 0) * 0.18m,
+            Total = (orden.Total_orden ?? 0) * 1.18m,
+            Estado = "Emitida"
+        };
+
+        orden.Estado_orden = "Facturada";
+        await _ordenRepo.ActualizarAsync(orden);
+
+       return await _facturaRepo.InsertarAsync(nuevaFactura);
+    }
+
+    public async Task<bool> AnularOrdenConReversionAsync(int id)
+    {
+       
+        var orden = await _ordenRepo.ObtenerPorIdAsync(id);
+        if (orden == null) throw new EntidadNoEncontradaException("Orden", id);
+
+      
+        orden.Estado_orden = "Anulada";
+        await _ordenRepo.ActualizarAsync(orden);
+
+        var facturas = await _facturaRepo.ObtenerTodosAsync();
+        var facturaAsociada = facturas.FirstOrDefault(f => f.Id_orden == id);
+
+        if (facturaAsociada != null)
+        {
+            facturaAsociada.Estado = "Anulada";
+         
+            await _facturaRepo.ActualizarAsync(facturaAsociada);
+        }
+
+        return true;
+    }
+
 }

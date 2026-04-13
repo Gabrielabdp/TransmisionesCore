@@ -1,4 +1,8 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace TransmisionesCore.Entities;
+
+[Table("Producto")]
 public class Producto
 {
     public int Id_producto { get; set; }

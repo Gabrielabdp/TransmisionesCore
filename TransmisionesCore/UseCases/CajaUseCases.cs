@@ -42,4 +42,26 @@ public class CajaUseCases
 
         await _repo.ActualizarAsync(caja);
     }
+
+    public async Task<ResumenCajaDiarioDTO> ObtenerResumenHoyAsync()
+    {
+        var hoy = DateTime.Today;
+
+        // Obtenemos el total facturado hoy desde el repo
+        var totalVentas = await _repo.ObtenerVentasDelDiaAsync(hoy);
+
+        return new ResumenCajaDiarioDTO(
+            TotalIngresos: totalVentas,
+            TotalEgresos: 0, // Como no hay tabla de gastos, lo dejamos en 0
+            SaldoNeto: totalVentas,
+            CantidadOperaciones: 0, // Opcional: podrías contar las facturas si quieres
+            Fecha: hoy
+        );
+
+
+    }
+    public async Task<EstadoCajaDTO> ObtenerEstadoActualAsync(int id)
+    {
+        return await _repo.ObtenerEstadoActualAsync(id);
+    }
 }

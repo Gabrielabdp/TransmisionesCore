@@ -3,6 +3,7 @@ using TransmisionesCore.Entities;
 using TransmisionesCore.Interfaces;
 using TransmisionesCore.UseCases;
 using TransmisionesInfraestructura.Data;
+using Microsoft.Data.SqlClient;
 
 namespace TransmisionesInfraestructura.Repositories;
 
@@ -48,5 +49,49 @@ public class ProductoRepository : IProductoRepository
             .ToListAsync();
 
         return resultado.FirstOrDefault();
+    }
+
+    public async Task<IEnumerable<ProductoFiltroDTO>> ObtenerPorCategoriaAsync(int idCategoria)
+    {
+        return await _context.Productos
+            .Where(p => p.Id_categoria == idCategoria && p.Activo) // Usamos tu campo 'Activo'
+            .Select(p => new ProductoFiltroDTO(
+                p.Id_producto,
+                p.Descripcion_producto,
+                p.Marca ?? "Sin Marca",
+                p.Precio_unitario,
+                p.Stock_actual,
+                p.Categoria.Nombre_categoria
+            ))
+            .ToListAsync();
+    }
+    public async Task<IEnumerable<ProductoRankingDTO>> ObtenerRankingUsoAsync(int top = 10)
+    {
+        var resultado = await _context.DetallesOrden
+            .GroupBy(d => d.Id_producto) // Agrupamos solo por ID primero
+            .Select(g => new
+            {
+                IdProducto = g.Key,
+                Cantidad = g.Sum(d => d.Cantidad),
+                Total = g.Sum(d => d.Cantidad * d.Precio_unitario)
+            })
+            .OrderByDescending(x => x.Cantidad)
+            .Take(top)
+            .ToListAsync();
+
+        return resultado.Select(r => new ProductoRankingDTO(
+            r.IdProducto,
+            "Producto " + r.IdProducto, // O buscar el nombre en el repo
+            r.Cantidad,
+            r.Total
+        ));
+    }
+    public async Task<IEnumerable<Producto>> ObtenerBajoStockDesdeSPAsync(int limite)
+    {
+        var parametro = new SqlParameter("@Stock_minimo", limite);
+
+         return await _context.Productos
+            .FromSqlRaw("EXEC sp_ReporteInventarioBajo @Stock_minimo", parametro)
+            .ToListAsync();
     }
 }

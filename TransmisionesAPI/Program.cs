@@ -58,6 +58,11 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
     });
 });
+// Registrar el Repositorio
+builder.Services.AddScoped<ILogRepository, LogRepository>();
+
+// Registrar el Caso de Uso (Este es el que te falta según el error)
+builder.Services.AddScoped<AuditoriaUseCases>();
 
 var app = builder.Build();
 

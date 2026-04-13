@@ -132,6 +132,73 @@ namespace TransmisionesIntegracion.Controllers
         }
 
 
+        [HttpGet("buscar/{documento}")]
+        public async Task<IActionResult> BuscarClientePorDocumento(string documento)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(15);
+
+                // Apuntamos al nuevo endpoint del CORE
+                var urlCore = $"https://localhost:56678/api/Clientes/buscar/{documento}";
+
+                var respuestaCore = await cliente.GetAsync(urlCore);
+
+                if (respuestaCore.IsSuccessStatusCode)
+                {
+                    var jsonCore = await respuestaCore.Content.ReadAsStringAsync();
+                    return Content(jsonCore, "application/json");
+                }
+                else if (respuestaCore.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return NotFound(new { mensaje = "El cliente no existe en el sistema central." });
+                }
+                else
+                {
+                    return BuscarDocumentoEnCache(documento);
+                }
+            }
+            catch (Exception)
+            {
+                // Si no hay red, caemos al caché local
+                return BuscarDocumentoEnCache(documento);
+            }
+        }
+
+        private IActionResult BuscarDocumentoEnCache(string documento)
+        {
+            // Búsqueda Offline (LINQ): Filtramos donde el documento contenga el texto buscado
+            var clientesLocales = _context.ClientesCache
+                                          .Where(c => c.Documento.Contains(documento))
+                                          .ToList();
+
+            if (clientesLocales.Any())
+            {
+                return Ok(new
+                {
+                    modoOffline = true,
+                    mensaje = "Mostrando resultados locales.",
+                    datos = clientesLocales
+                });
+            }
+
+            return NotFound(new { mensaje = "(Offline) No se encontraron clientes con ese documento en el caché local." });
+        }
+
+
+        [HttpGet("{id}/resumen")]
+        public async Task<IActionResult> ObtenerResumenCliente(int id)
+        {
+            return await EjecutarConsultaProxy($"https://localhost:56678/api/Clientes/{id}/resumen");
+        }
+
+        [HttpGet("{id}/resumen-vehiculos")]
+        public async Task<IActionResult> ObtenerEstadoFlota(int id)
+        {
+            return await EjecutarConsultaProxy($"https://localhost:56678/api/Clientes/{id}/resumen-vehiculos");
+        }
+
         [HttpPost]
         public async Task<IActionResult> RegistrarCliente([FromBody] CrearClienteIntegracionDto peticion)
         {
@@ -190,6 +257,31 @@ namespace TransmisionesIntegracion.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { modoOffline = true, exito = true, mensaje = "Sistema desconectado. Cliente guardado en cola y visible en el directorio local." });
+        }
+
+        private async Task<IActionResult> EjecutarConsultaProxy(string urlCore)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(8); // Tiempo corto para no bloquear la UI
+                var respuesta = await cliente.GetAsync(urlCore);
+
+                if (respuesta.IsSuccessStatusCode)
+                {
+                    var json = await respuesta.Content.ReadAsStringAsync();
+                    return Content(json, "application/json");
+                }
+                return StatusCode((int)respuesta.StatusCode, "El servicio central reportó un error.");
+            }
+            catch (Exception)
+            {
+                return StatusCode(503, new
+                {
+                    error = "Offline",
+                    mensaje = "Este reporte o consulta avanzada requiere conexión a internet y no está disponible en modo local."
+                });
+            }
         }
     }
     public class ClienteCoreDto
