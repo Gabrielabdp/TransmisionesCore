@@ -119,6 +119,113 @@ namespace TransmisionesIntegracion.Controllers
             }
         }
 
+        [HttpPost("{id}/aprobar")]
+        public async Task<IActionResult> AprobarCotizacion(int id)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(10);
+                var res = await cliente.PostAsync($"https://localhost:56678/api/Ordenes/{id}/aprobar", new StringContent(""));
+
+                if (res.IsSuccessStatusCode) return Content(await res.Content.ReadAsStringAsync(), "application/json");
+                if (res.StatusCode == System.Net.HttpStatusCode.BadRequest) return BadRequest(await res.Content.ReadAsStringAsync());
+            }
+            catch (Exception) { /* Ignoramos para caer a modo offline */ }
+
+            // FILTRO OFFLINE: Si no hay red, verificamos que tenga sentido encolarlo
+            var ordenLocal = _context.OrdenesCache.FirstOrDefault(o => o.Id == id);
+            if (ordenLocal != null && (ordenLocal.TipoOrden != "Cotizacion" || ordenLocal.TipoOrden != "Cotización"))
+            {
+                return BadRequest(new { mensaje = "(Offline) Rechazado: Solo se pueden aprobar Cotizaciones." });
+            }
+
+            return await EncolarTransaccionOffline("AprobarCotizacion", new { IdOrden = id });
+        }
+
+        [HttpPost("{id}/convertir")]
+        public async Task<IActionResult> ConvertirCotizacion(int id)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(10);
+                var res = await cliente.PostAsync($"https://localhost:56678/api/Ordenes/{id}/convertir", new StringContent(""));
+
+                if (res.IsSuccessStatusCode) return Content(await res.Content.ReadAsStringAsync(), "application/json");
+                if (res.StatusCode == System.Net.HttpStatusCode.BadRequest) return BadRequest(await res.Content.ReadAsStringAsync());
+            }
+            catch (Exception) { /* Caer a modo offline */ }
+
+            // FILTRO OFFLINE
+            var ordenLocal = _context.OrdenesCache.FirstOrDefault(o => o.Id == id);
+            if (ordenLocal != null && ordenLocal.TipoOrden == "Factura")
+            {
+                return BadRequest(new { mensaje = "(Offline) Rechazado: Esta orden ya es una Factura." });
+            }
+
+            return await EncolarTransaccionOffline("ConvertirAFactura", new { IdOrden = id });
+        }
+
+        // CORRECCIÓN: Quitamos el [FromBody] string motivoAnulacion
+        [HttpPost("{id}/anular")]
+        public async Task<IActionResult> AnularOrden(int id)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(10);
+                var res = await cliente.PostAsync($"https://localhost:56678/api/Ordenes/{id}/anular", new StringContent(""));
+
+                if (res.IsSuccessStatusCode) return Content(await res.Content.ReadAsStringAsync(), "application/json");
+                if (res.StatusCode == System.Net.HttpStatusCode.BadRequest) return BadRequest(await res.Content.ReadAsStringAsync());
+            }
+            catch (Exception) { /* Caer a modo offline */ }
+
+            // FILTRO OFFLINE
+            var ordenLocal = _context.OrdenesCache.FirstOrDefault(o => o.Id == id);
+            if (ordenLocal != null && (ordenLocal.Estado == "Cancelada" || ordenLocal.Estado == "Anulada"))
+            {
+                return BadRequest(new { mensaje = "(Offline) Rechazado: Esta orden ya se encuentra anulada." });
+            }
+
+            return await EncolarTransaccionOffline("AnularOrden", new { IdOrden = id });
+        }
+
+        [HttpPatch("{id}/asignar-empleado")]
+        public async Task<IActionResult> AsignarEmpleado(int id, [FromBody] int idEmpleado)
+        {
+            var jsonContent = System.Text.Json.JsonSerializer.Serialize(new { idEmpleado = idEmpleado });
+            var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(10);
+                var res = await cliente.PatchAsync($"https://localhost:56678/api/Ordenes/{id}/asignar-empleado", content);
+
+                if (res.IsSuccessStatusCode) return Content(await res.Content.ReadAsStringAsync(), "application/json");
+                if (res.StatusCode == System.Net.HttpStatusCode.BadRequest) return BadRequest(await res.Content.ReadAsStringAsync());
+            }
+            catch (Exception) { /* Caer a modo offline */ }
+
+            // FILTRO OFFLINE AVANZADO
+            var ordenLocal = _context.OrdenesCache.FirstOrDefault(o => o.Id == id);
+            if (ordenLocal != null)
+            {
+                if (ordenLocal.Estado == "Cancelada" || ordenLocal.Estado == "Anulada")
+                {
+                    return BadRequest(new { mensaje = "(Offline) Rechazado: No se puede asignar un mecánico a una orden que ha sido anulada." });
+                }
+                if (ordenLocal.Estado == "Facturada" || ordenLocal.Estado == "Completada")
+                {
+                    return BadRequest(new { mensaje = "(Offline) Rechazado: No se puede reasignar un empleado a una orden ya finalizada." });
+                }
+            }
+
+            return await EncolarTransaccionOffline("AsignarEmpleadoOrden", new { IdOrden = id, IdEmpleado = idEmpleado });
+        }
+
         private async Task<IActionResult> GuardarAccionOrdenOffline(string tipoAccion, int idOrden)
         {
             var jsonEmpacado = JsonSerializer.Serialize(new { IdOrden = idOrden });
@@ -262,6 +369,30 @@ namespace TransmisionesIntegracion.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { modoOffline = true, exito = true, mensaje = "Sistema desconectado. Guardada localmente." });
         }
+
+        private async Task<IActionResult> EncolarTransaccionOffline(string tipoAccion, object payload)
+        {
+            // Empacamos cualquier objeto anónimo que nos llegue (ej. { IdOrden = 1, Motivo = "Cliente canceló" })
+            var jsonEmpacado = JsonSerializer.Serialize(payload);
+
+            _context.TransaccionesPendientes.Add(new TransaccionPendiente
+            {
+                TipoTransaccion = tipoAccion,
+                DatosJson = jsonEmpacado,
+                FechaIntento = DateTime.Now,
+                Sincronizado = false // Igual que en tu controlador de Clientes
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                modoOffline = true,
+                exito = true,
+                mensaje = $"Sistema desconectado. La acción '{tipoAccion}' se ha guardado en la cola para sincronización."
+            });
+        }
+
     }
 
 

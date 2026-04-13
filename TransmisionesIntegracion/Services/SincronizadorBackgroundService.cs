@@ -13,11 +13,16 @@ namespace TransmisionesIntegracion.Services
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<SincronizadorBackgroundService> _logger;
 
-        public SincronizadorBackgroundService(IServiceProvider serviceProvider, IHttpClientFactory httpClientFactory)
+        public SincronizadorBackgroundService(
+            IServiceProvider serviceProvider,
+            IHttpClientFactory httpClientFactory,
+            ILogger<SincronizadorBackgroundService> logger) 
         {
             _serviceProvider = serviceProvider;
             _httpClientFactory = httpClientFactory;
+            _logger = logger; 
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -566,6 +571,102 @@ namespace TransmisionesIntegracion.Services
                             exitoAlEnviar = true;
                         }
                     }
+
+                    else if (transaccion.TipoTransaccion == "AprobarCotizacion")
+                    {
+                        var payload = JsonSerializer.Deserialize<JsonElement>(transaccion.DatosJson);
+                        int idOrden = payload.GetProperty("IdOrden").GetInt32();
+
+                        var res = await cliente.PostAsync($"https://localhost:56678/api/Ordenes/{idOrden}/aprobar", new StringContent(""));
+
+                        if (res.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                            _logger.LogInformation($"Sincronización Exitosa: Cotización {idOrden} aprobada.");
+                        }
+                        else if ((int)res.StatusCode >= 400)
+                        {
+                            // Si da error de negocio (400, 404, 500 de validación), lo matamos para no hacer bucle.
+                            exitoAlEnviar = true;
+                            _logger.LogWarning($"Descartada: El CORE rechazó aprobar la orden {idOrden}.");
+                        }
+                    }
+                    else if (transaccion.TipoTransaccion == "ConvertirAFactura")
+                    {
+                        var payload = JsonSerializer.Deserialize<JsonElement>(transaccion.DatosJson);
+                        int idOrden = payload.GetProperty("IdOrden").GetInt32();
+
+                        var res = await cliente.PostAsync($"https://localhost:56678/api/Ordenes/{idOrden}/convertir", new StringContent(""));
+
+                        if (res.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                            _logger.LogInformation($"Sincronización Exitosa: Cotización {idOrden} convertida a factura.");
+                        }
+                        else if ((int)res.StatusCode >= 400)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                    }
+                    else if (transaccion.TipoTransaccion == "AnularOrden")
+                    {
+                        var payload = JsonSerializer.Deserialize<JsonElement>(transaccion.DatosJson);
+                        int idOrden = payload.GetProperty("IdOrden").GetInt32();
+
+                        // Mandamos el body vacío como solicitaste
+                        var res = await cliente.PostAsync($"https://localhost:56678/api/Ordenes/{idOrden}/anular", new StringContent(""));
+
+                        if (res.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                            _logger.LogInformation($"Sincronización Exitosa: Orden {idOrden} anulada.");
+                        }
+                        else if ((int)res.StatusCode >= 400)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                    }
+                    else if (transaccion.TipoTransaccion == "AsignarEmpleadoOrden")
+                    {
+                        var payload = JsonSerializer.Deserialize<JsonElement>(transaccion.DatosJson);
+                        int idOrden = payload.GetProperty("IdOrden").GetInt32();
+                        int idEmpleado = payload.GetProperty("IdEmpleado").GetInt32();
+
+                        // CORRECCIÓN DEL JSON: Ahora enviamos { "idEmpleado": X }
+                        var jsonContent = JsonSerializer.Serialize(new { idEmpleado = idEmpleado });
+                        var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+                        var res = await cliente.PatchAsync($"https://localhost:56678/api/Ordenes/{idOrden}/asignar-empleado", content);
+
+                        if (res.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                            _logger.LogInformation($"Sincronización Exitosa: Empleado {idEmpleado} asignado a orden {idOrden}.");
+                        }
+                        else if ((int)res.StatusCode >= 400)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                    }
+                    else if (transaccion.TipoTransaccion == "ActualizarPreciosLote")
+                    {
+                        var url = "https://localhost:56678/api/Productos/actualizar-precios";
+
+                        var jsonEnvuelto = $"{{\"precios\": {transaccion.DatosJson}}}";
+                        var content = new StringContent(jsonEnvuelto, Encoding.UTF8, "application/json");
+
+                        var res = await cliente.PostAsync(url, content);
+                        if (res.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                            _logger.LogInformation($"Sincronización Exitosa: Lote de precios actualizado en el CORE.");
+                        }
+                        else if ((int)res.StatusCode >= 400)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                    }
+
 
                     if (exitoAlEnviar)
                     {

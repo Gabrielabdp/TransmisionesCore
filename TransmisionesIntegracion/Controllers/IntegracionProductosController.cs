@@ -49,6 +49,7 @@ namespace TransmisionesIntegracion.Controllers
                             _context.ProductosCache.Add(new ProductoCache
                             {
                                 Id = p.Id_producto,
+                                IdCategoria = p.Id_categoria,
                                 Descripcion = p.Descripcion_producto,
                                 PrecioUnitario = p.Precio_unitario,
                                 StockActual = p.Stock_actual,
@@ -89,6 +90,55 @@ namespace TransmisionesIntegracion.Controllers
             return StatusCode(503, "El sistema central está caído y no hay datos locales.");
         }
 
+        [HttpGet("categoria/{idCategoria}")]
+        public async Task<IActionResult> ObtenerPorCategoria(int idCategoria)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(10);
+                var urlCore = $"https://localhost:56678/api/Productos/categoria/{idCategoria}";
+
+                var respuestaCore = await cliente.GetAsync(urlCore);
+
+                if (respuestaCore.IsSuccessStatusCode)
+                {
+                    var jsonCore = await respuestaCore.Content.ReadAsStringAsync();
+                    return Content(jsonCore, "application/json");
+                }
+                else if (respuestaCore.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return NotFound(new { mensaje = "No se encontraron productos para esta categoría en el sistema central." });
+                }
+
+                return await FiltrarCategoriaEnCache(idCategoria);
+            }
+            catch (Exception)
+            {
+                return await FiltrarCategoriaEnCache(idCategoria);
+            }
+        }
+
+        private async Task<IActionResult> FiltrarCategoriaEnCache(int idCategoria)
+        {
+            // Búsqueda Offline con LINQ
+            var productosLocales = await _context.ProductosCache
+                                                 .Where(p => p.IdCategoria == idCategoria)
+                                                 .ToListAsync();
+
+            if (productosLocales.Any())
+            {
+                return Ok(new
+                {
+                    modoOffline = true,
+                    mensaje = "Mostrando productos de la categoría desde el inventario local.",
+                    datos = productosLocales
+                });
+            }
+
+            return NotFound(new { mensaje = "(Offline) No hay productos de esta categoría en el caché local." });
+        }
+
 
         [HttpPost]
         public async Task<IActionResult> CrearProducto([FromBody] CrearProductoIntegracionDto peticion)
@@ -113,6 +163,12 @@ namespace TransmisionesIntegracion.Controllers
             }
         }
 
+
+        [HttpGet("ranking-uso")]
+        public async Task<IActionResult> ObtenerRankingPiezas()
+        {
+            return await EjecutarConsultaProxy("https://localhost:56678/api/Productos/ranking-uso");
+        }
 
         [HttpPatch("{id}/precio")]
         public async Task<IActionResult> ActualizarPrecio(int id, [FromQuery] decimal nuevoPrecio, [FromQuery] decimal? nuevoCosto)
@@ -203,6 +259,62 @@ namespace TransmisionesIntegracion.Controllers
             }
         }
 
+
+        [HttpPost("actualizar-precios")]
+        public async Task<IActionResult> ActualizarPreciosLote([FromBody] List<ActualizarPrecioLoteDto> actualizaciones)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(15);
+                var urlCore = "https://localhost:56678/api/Productos/actualizar-precios";
+
+                var payloadParaCore = new { precios = actualizaciones };
+                var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payloadParaCore);
+                var content = new StringContent(jsonPayload, System.Text.Encoding.UTF8, "application/json");
+
+                var respuestaCore = await cliente.PostAsync(urlCore, content);
+
+                if (respuestaCore.IsSuccessStatusCode)
+                {
+                    // ¡OJO AQUÍ TAMBIÉN! Si fue exitoso online, también debemos actualizar el caché local 
+                    // para no tener que esperar a que el Sincronizador descargue todo el catálogo de nuevo.
+                    AplicarActualizacionOptimistaLocal(actualizaciones);
+                    await _context.SaveChangesAsync();
+
+                    return Content(await respuestaCore.Content.ReadAsStringAsync(), "application/json");
+                }
+                if (respuestaCore.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    return BadRequest(await respuestaCore.Content.ReadAsStringAsync());
+                }
+
+                // Si falla la red, aplicamos los cambios en caché y encolamos
+                AplicarActualizacionOptimistaLocal(actualizaciones);
+                return await EncolarTransaccionOffline("ActualizarPreciosLote", actualizaciones);
+            }
+            catch (Exception)
+            {
+                // Si no hay internet, aplicamos los cambios en caché y encolamos
+                AplicarActualizacionOptimistaLocal(actualizaciones);
+                return await EncolarTransaccionOffline("ActualizarPreciosLote", actualizaciones);
+            }
+        }
+
+        // Método auxiliar privado para no repetir código
+        private void AplicarActualizacionOptimistaLocal(List<ActualizarPrecioLoteDto> actualizaciones)
+        {
+            foreach (var actualizacion in actualizaciones)
+            {
+                var productoLocal = _context.ProductosCache.FirstOrDefault(p => p.Id == actualizacion.IdProducto);
+                if (productoLocal != null)
+                {
+                    // Actualizamos el precio en nuestra vitrina local de SQLite
+                    productoLocal.PrecioUnitario = actualizacion.NuevoPrecio;
+                }
+            }
+        }
+
         private async Task<IActionResult> GuardarAjusteStockOffline(AjustarStockIntegracionDto datos)
         {
             var productoLocal = await _context.ProductosCache.FirstOrDefaultAsync(p => p.Id == datos.IdProducto);
@@ -280,6 +392,54 @@ namespace TransmisionesIntegracion.Controllers
             await _context.SaveChangesAsync();
             return Ok(new { modoOffline = true, exito = true, mensaje = "Precio actualizado en caché local." });
         }
+
+        private async Task<IActionResult> EjecutarConsultaProxy(string urlCore)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(8); // Tiempo corto para no bloquear la UI
+                var respuesta = await cliente.GetAsync(urlCore);
+
+                if (respuesta.IsSuccessStatusCode)
+                {
+                    var json = await respuesta.Content.ReadAsStringAsync();
+                    return Content(json, "application/json");
+                }
+                return StatusCode((int)respuesta.StatusCode, "El servicio central reportó un error.");
+            }
+            catch (Exception)
+            {
+                return StatusCode(503, new
+                {
+                    error = "Offline",
+                    mensaje = "Este reporte o consulta avanzada requiere conexión a internet y no está disponible en modo local."
+                });
+            }
+        }
+
+        private async Task<IActionResult> EncolarTransaccionOffline(string tipoAccion, object payload)
+        {
+            // Empacamos cualquier objeto anónimo que nos llegue (ej. { IdOrden = 1, Motivo = "Cliente canceló" })
+            var jsonEmpacado = JsonSerializer.Serialize(payload);
+
+            _context.TransaccionesPendientes.Add(new TransaccionPendiente
+            {
+                TipoTransaccion = tipoAccion,
+                DatosJson = jsonEmpacado,
+                FechaIntento = DateTime.Now,
+                Sincronizado = false // Igual que en tu controlador de Clientes
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                modoOffline = true,
+                exito = true,
+                mensaje = $"Sistema desconectado. La acción '{tipoAccion}' se ha guardado en la cola para sincronización."
+            });
+        }
     }
 
 
@@ -306,8 +466,15 @@ namespace TransmisionesIntegracion.Controllers
     public class ProductoCoreDto
     {
         public int Id_producto { get; set; }
+        public int Id_categoria { get; set; }
         public string Descripcion_producto { get; set; } = string.Empty;
         public decimal Precio_unitario { get; set; }
         public int Stock_actual { get; set; }
+    }
+
+    public class ActualizarPrecioLoteDto
+    {
+        public int IdProducto { get; set; }
+        public decimal NuevoPrecio { get; set; }
     }
 }

@@ -86,6 +86,52 @@ namespace TransmisionesIntegracion.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        public async Task<IActionResult> ObtenerEmpleadoPorId(int id)
+        {
+            try
+            {
+                var cliente = _httpClientFactory.CreateClient();
+                cliente.Timeout = TimeSpan.FromSeconds(10);
+                var urlCore = $"https://localhost:56678/api/Empleados/{id}";
+
+                var respuestaCore = await cliente.GetAsync(urlCore);
+
+                if (respuestaCore.IsSuccessStatusCode)
+                {
+                    var jsonCore = await respuestaCore.Content.ReadAsStringAsync();
+                    return Content(jsonCore, "application/json");
+                }
+                else if (respuestaCore.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return NotFound(new { mensaje = "El empleado no existe en el sistema central." });
+                }
+
+                return await BuscarEmpleadoEnCache(id);
+            }
+            catch (Exception)
+            {
+                return await BuscarEmpleadoEnCache(id);
+            }
+        }
+
+        private async Task<IActionResult> BuscarEmpleadoEnCache(int id)
+        {
+            var empleadoLocal = await _context.EmpleadosCache.FirstOrDefaultAsync(e => e.Id == id);
+
+            if (empleadoLocal != null)
+            {
+                return Ok(new
+                {
+                    modoOffline = true,
+                    mensaje = "Mostrando datos del empleado desde el caché local.",
+                    datos = empleadoLocal
+                });
+            }
+
+            return NotFound(new { mensaje = "(Offline) El empleado no se encuentra en el caché local." });
+        }
+
         private async Task<IActionResult> GuardarEnColaOffline(CrearEmpleadoIntegracionDto datos)
         {
             // 1. Guardar en el Buzón de salida (Para que el Worker lo suba luego)

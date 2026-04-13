@@ -198,9 +198,9 @@ public class OrdenUseCases
             Id_orden = orden.Id_orden,
             Id_cliente = orden.Id_cliente,
             Id_empleado = orden.Id_empleado,
-            Numero_factura = $"FAC-{DateTime.Now.Ticks}", // Generación simple de número
+            Numero_factura = $"FAC-{DateTime.Now}",
             Fecha_factura = DateTime.UtcNow,
-            SubTotal = orden.Total_orden, 
+            SubTotal = orden.Total_orden,
             ITBIS = (orden.Total_orden ?? 0) * 0.18m,
             Total = (orden.Total_orden ?? 0) * 1.18m,
             Estado = "Emitida"
