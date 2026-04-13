@@ -668,6 +668,63 @@ namespace TransmisionesIntegracion.Services
                     }
 
 
+                    else if (transaccion.TipoTransaccion == "NuevoEmpleado")
+                    {
+                        var urlCore = "https://localhost:56678/api/Empleados";
+                        var jsonContent = new StringContent(transaccion.DatosJson, Encoding.UTF8, "application/json");
+
+                        var respuesta = await cliente.PostAsync(urlCore, jsonContent);
+
+                        if (respuesta.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                        else
+                        {
+                            var mensajeError = await respuesta.Content.ReadAsStringAsync();
+                            if (mensajeError.Contains("ya existe") || mensajeError.Contains("FOREIGN KEY"))
+                            {
+                                exitoAlEnviar = true;
+                            }
+                        }
+                    }
+                    else if (transaccion.TipoTransaccion == "NuevoVehiculo")
+                    {
+                        var urlCore = "https://localhost:56678/api/Vehiculos";
+                        var jsonContent = new StringContent(transaccion.DatosJson, Encoding.UTF8, "application/json");
+
+                        var respuesta = await cliente.PostAsync(urlCore, jsonContent);
+
+                        if (respuesta.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                        else
+                        {
+                            if (respuesta.StatusCode == System.Net.HttpStatusCode.BadRequest || await respuesta.Content.ReadAsStringAsync() is var msg && msg.Contains("FOREIGN KEY"))
+                            {
+                                exitoAlEnviar = true;
+                            }
+                        }
+                    }
+
+                    else if (transaccion.TipoTransaccion == "AjustarStockProducto")
+                    {
+                        var urlCore = "https://localhost:56678/api/Productos/ajustar-stock";
+                        var jsonContent = new StringContent(transaccion.DatosJson, Encoding.UTF8, "application/json");
+
+                        var respuesta = await cliente.PostAsync(urlCore, jsonContent);
+
+                        if (respuesta.IsSuccessStatusCode)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                        else if (respuesta.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                        {
+                            exitoAlEnviar = true;
+                        }
+                    }
+
                     if (exitoAlEnviar)
                     {
                         context.TransaccionesPendientes.Remove(transaccion);
