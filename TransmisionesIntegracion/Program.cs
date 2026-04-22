@@ -24,6 +24,8 @@ namespace TransmisionesIntegracion
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddSingleton<TransmisionesIntegracion.Services.EmailService>();
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
