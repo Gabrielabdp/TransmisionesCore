@@ -23,4 +23,17 @@ public class CajasController : ControllerBase
         await _useCases.CerrarCajaAsync(id, idUsuario, saldoFinal);
         return Ok();
     }
+
+    [HttpGet("{id}/reporte")]
+    public async Task<IActionResult> ObtenerReporte(int id)
+    {
+        return Ok(await _useCases.GenerarReporteCierreAsync(id));
+    }
+
+    [HttpPost("{id}/movimiento")]
+    public async Task<IActionResult> RegistrarMovimiento(int id, [FromBody] RegistrarMovimientoDto req)
+    {
+        await _useCases.RegistrarMovimientoAsync(id, req.IdUsuario, req.Monto, req.Tipo, req.Motivo);
+        return Ok();
+    }
 }

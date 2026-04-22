@@ -44,6 +44,7 @@ public interface ICajaRepository
     Task<IEnumerable<Caja>> ObtenerTodosAsync(int? idSucursal = null);
     Task ActualizarAsync(Caja caja);
     Task RegistrarMovimientoAsync(MovimientoCaja movimiento);
+    Task<IEnumerable<MovimientoCaja>> ObtenerMovimientosAsync(int idCaja, DateTime desde);
 }
 
 public interface IProveedorRepository
@@ -84,6 +85,7 @@ public interface IVehiculoRepository
     Task<Vehiculo?> ObtenerPorMatriculaAsync(string matricula);
     Task<IEnumerable<Vehiculo>> ObtenerPorClienteAsync(int idCliente);
     Task<Vehiculo> InsertarAsync(Vehiculo vehiculo);
+    Task EliminarAsync(string matricula);
 }
 
 public interface IGarantiaRepository

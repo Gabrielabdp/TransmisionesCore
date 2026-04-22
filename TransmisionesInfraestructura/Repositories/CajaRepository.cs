@@ -33,4 +33,12 @@ public class CajaRepository : ICajaRepository
         _context.MovimientosCaja.Add(movimiento);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<IEnumerable<MovimientoCaja>> ObtenerMovimientosAsync(int idCaja, DateTime desde)
+    {
+        return await _context.MovimientosCaja
+            .Where(m => m.Id_caja == idCaja && m.Fecha >= desde)
+            .OrderByDescending(m => m.Fecha)
+            .ToListAsync();
+    }
 }

@@ -102,4 +102,31 @@ public class CajaUseCases
 
         await _repo.ActualizarAsync(caja);
     }
+
+    public async Task<ReporteCajaResponse> GenerarReporteCierreAsync(int idCaja)
+    {
+        var caja = await _repo.ObtenerPorIdAsync(idCaja)
+            ?? throw new EntidadNoEncontradaException("Caja", idCaja);
+
+        var desde = caja.Ultima_apertura ?? DateTime.Today;
+        var movimientos = await _repo.ObtenerMovimientosAsync(idCaja, desde);
+
+        var ventas = movimientos.Where(m => m.Tipo == "Entrada").ToList();
+        var gastos = movimientos.Where(m => m.Tipo == "Salida").ToList();
+
+        var totalVentas = ventas.Sum(v => v.Monto);
+        var totalGastos = gastos.Sum(g => g.Monto);
+
+        return new ReporteCajaResponse(
+            IdCaja: caja.Id_caja,
+            NombreCaja: caja.Codigo_caja,
+            SaldoInicial: caja.Saldo_inicial,
+            TotalVentas: totalVentas,
+            TotalITBIS: totalVentas - (totalVentas / 1.18m),
+            TotalGastos: totalGastos,
+            SaldoEsperado: caja.Saldo_inicial + totalVentas - totalGastos,
+            VentasRecientes: ventas.Select(v => new VentaResumenDto(v.Motivo, v.Monto, v.Fecha)).ToList(),
+            GastosDelDia: gastos.Select(g => new GastoResumenDto(g.Motivo, g.Monto, g.Fecha)).ToList()
+        );
+    }
 }

@@ -6,8 +6,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Registrar HttpClient para consumir la API Central (ajusta el puerto si tu API usa uno diferente)
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:56678/") });
+// Registrar HttpClient para consumir el Servicio de Integración (Capa Offline/Resiliencia)
+builder.Services.AddScoped(sp => 
+{
+    var handler = new HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+    };
+    return new HttpClient(handler) { BaseAddress = new Uri("https://localhost:7190/") };
+});
 
 var app = builder.Build();
 

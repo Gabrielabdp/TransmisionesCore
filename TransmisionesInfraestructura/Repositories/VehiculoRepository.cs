@@ -27,4 +27,14 @@ public class VehiculoRepository : IVehiculoRepository
         await _context.SaveChangesAsync();
         return vehiculo;
     }
+
+    public async Task EliminarAsync(string matricula)
+    {
+        var v = await _context.Vehiculos.FindAsync(matricula);
+        if (v != null)
+        {
+            _context.Vehiculos.Remove(v);
+            await _context.SaveChangesAsync();
+        }
+    }
 }

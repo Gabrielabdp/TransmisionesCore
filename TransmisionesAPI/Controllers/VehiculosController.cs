@@ -33,4 +33,11 @@ public class VehiculosController : ControllerBase
         var vehiculos = await _useCases.ObtenerPorClienteAsync(idCliente);
         return Ok(vehiculos);
     }
+
+    [HttpDelete("{matricula}")]
+    public async Task<IActionResult> Eliminar(string matricula)
+    {
+        await _useCases.EliminarVehiculoAsync(matricula);
+        return Ok();
+    }
 }

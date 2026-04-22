@@ -12,7 +12,11 @@ namespace TransmisionesIntegracion
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            builder.Services.AddHttpClient();
+            builder.Services.AddHttpClient("Default").ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            });
+            builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("Default"));
 
             builder.Services.AddDbContext<IntegracionDbContext>(opciones =>
                 opciones.UseSqlite("Data Source=integracion_local.db"));

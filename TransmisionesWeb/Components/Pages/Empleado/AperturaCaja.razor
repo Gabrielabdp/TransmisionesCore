@@ -1,6 +1,7 @@
 @page "/empleado/apertura"
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
+@inject HttpClient Http
 
 <div class="container-fluid bg-light vh-100 d-flex align-items-center justify-content-center">
     <div class="card shadow-lg border-0 rounded-4" style="max-width: 450px; width: 100%;">
@@ -11,6 +12,11 @@
         </div>
         <div class="card-body p-5">
             <form @onsubmit="IniciarJornada">
+                @if (!string.IsNullOrEmpty(errorMensaje))
+                {
+                    <div class="alert alert-danger small py-2 mb-4">@errorMensaje</div>
+                }
+
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-muted">CÓDIGO DE EMPLEADO</label>
                     <div class="input-group">
@@ -29,7 +35,8 @@
                 </div>
 
                 <div class="d-grid gap-2 mt-5">
-                    <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold rounded-pill shadow">
+                    <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold rounded-pill shadow" disabled="@cargando">
+                        @if (cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
                         INICIAR JORNADA <i class="bi bi-arrow-right ms-2"></i>
                     </button>
                     <a href="/" class="btn btn-link text-muted text-decoration-none small">Volver al Portal Principal</a>
@@ -45,12 +52,36 @@
 @code {
     private string CodigoEmpleado { get; set; } = "";
     private decimal MontoInicial { get; set; }
+    private bool cargando = false;
+    private string? errorMensaje;
 
-    private void IniciarJornada()
+    private async Task IniciarJornada()
     {
-        // En una fase posterior, esto llamará a la API de Apertura que creamos
-        // Por ahora, navegamos a la terminal de caja
-        Navigation.NavigateTo("/empleado/caja");
+        try 
+        {
+            cargando = true;
+            errorMensaje = null;
+
+            // Llamada a través de la capa de integración para soporte offline
+            var res = await Http.PostAsJsonAsync($"api/integracion/cajas/1/abrir", new { IdUsuario = 1, SaldoInicial = MontoInicial });
+            
+            if (res.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/empleado/caja");
+            }
+            else 
+            {
+                errorMensaje = "No se pudo abrir la caja. Verifique si ya está abierta o contacte a soporte.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMensaje = "Error de conexión: " + ex.Message;
+        }
+        finally
+        {
+            cargando = false;
+        }
     }
 }
 

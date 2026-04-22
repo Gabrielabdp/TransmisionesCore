@@ -1,11 +1,13 @@
 @page "/empleado/caja"
 @using TransmisionesCore.Entities
+@using TransmisionesCore.UseCases
 @using System.Net.Http.Json
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject HttpClient Http
+@inject IJSRuntime JS
 
-<div class="container-fluid bg-dark vh-100 p-0 text-white overflow-hidden">
+<div class="container-fluid bg-dark vh-100 p-0 text-white overflow-hidden d-print-none">
     <!-- Barra Superior de Caja -->
     <div class="d-flex justify-content-between align-items-center p-3 border-bottom border-secondary bg-black">
         <h4 class="mb-0 fw-bold"><i class="bi bi-pc-display me-2 text-warning"></i> TERMINAL DE CAJA - TRANSMISIONES MAG</h4>
@@ -13,7 +15,9 @@
             @if (cargando) { <span class="spinner-border spinner-border-sm me-3 text-warning"></span> }
             <span class="badge bg-success me-3">CAJA ABIERTA</span>
             <span class="text-white-50 me-3">Cajero: EMP-001</span>
-            <button class="btn btn-sm btn-outline-danger" @onclick='() => Navigation.NavigateTo("/")'>Salir</button>
+            <button class="btn btn-sm btn-outline-danger me-2" @onclick="() => mostrarModalGasto = true"><i class="bi bi-dash-circle me-1"></i> Registrar Gasto</button>
+            <button class="btn btn-sm btn-outline-warning me-2" @onclick="MostrarReporteCuadre"><i class="bi bi-calculator me-1"></i> Cuadre y Cierre</button>
+            <button class="btn btn-sm btn-outline-light" @onclick='() => Navigation.NavigateTo("/")'>Salir</button>
         </div>
     </div>
 
@@ -26,7 +30,7 @@
                         <div class="col">
                             <div class="input-group">
                                 <span class="input-group-text bg-dark border-secondary text-white"><i class="bi bi-search"></i></span>
-                                <input type="text" class="form-control bg-dark border-secondary text-white" @bind="busqueda" @bind:event="oninput" placeholder="Buscar en inventario..." />
+                                <input type="text" class="form-control bg-dark border-secondary text-white" @bind="busqueda" @bind:event="oninput" placeholder="Buscar en inventario (Filtros, Aceites, Bujías...)" />
                             </div>
                         </div>
                     </div>
@@ -36,10 +40,13 @@
                         <div class="list-group mt-2 position-absolute shadow-lg w-75" style="z-index: 1000;">
                             @foreach (var p in productosFiltrados.Take(5))
                             {
-                                <button class="list-group-item list-group-item-action bg-dark text-white border-secondary" @onclick="() => AgregarAlCarrito(p)">
-                                    <div class="d-flex justify-content-between">
-                                        <span>@p.Descripcion_producto</span>
-                                        <span class="text-warning">RD$ @p.Precio_unitario.ToString("N2")</span>
+                                <button class="list-group-item list-group-item-action bg-dark text-white border-secondary py-3" @onclick="() => AgregarAlCarrito(p)">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="fw-bold">@p.Descripcion_producto</span>
+                                            <div class="small text-white-50">Stock: @p.Stock_actual unidades</div>
+                                        </div>
+                                        <span class="badge bg-warning text-dark fs-6">RD$ @p.Precio_unitario.ToString("N2")</span>
                                     </div>
                                 </button>
                             }
@@ -47,33 +54,46 @@
                     }
                 </div>
                 <div class="card-body p-0">
-                    <table class="table table-dark table-hover mb-0">
-                        <thead class="text-white-50 small text-uppercase">
-                            <tr>
-                                <th class="ps-4">Item</th>
-                                <th class="text-center">Cant.</th>
-                                <th class="text-end">Precio</th>
-                                <th class="text-end pe-4">Total</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Carrito)
-                            {
+                    @if (Carrito.Any())
+                    {
+                        <table class="table table-dark table-hover mb-0">
+                            <thead class="text-white-50 small text-uppercase">
                                 <tr>
-                                    <td class="ps-4">@item.Nombre</td>
-                                    <td class="text-center">
-                                        <button class="btn btn-sm btn-outline-secondary py-0" @onclick="() => item.Cantidad--">-</button>
-                                        <span class="mx-2">@item.Cantidad</span>
-                                        <button class="btn btn-sm btn-outline-secondary py-0" @onclick="() => item.Cantidad++">+</button>
-                                    </td>
-                                    <td class="text-end">RD$ @item.Precio.ToString("N2")</td>
-                                    <td class="text-end pe-4 fw-bold text-info">RD$ @(item.Total.ToString("N2"))</td>
-                                    <td><button class="btn btn-sm btn-link text-danger p-0" @onclick="() => Carrito.Remove(item)"><i class="bi bi-trash"></i></button></td>
+                                    <th class="ps-4">Item</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Precio</th>
+                                    <th class="text-end pe-4">Total</th>
+                                    <th></th>
                                 </tr>
-                            }
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Carrito)
+                                {
+                                    <tr>
+                                        <td class="ps-4">@item.Nombre</td>
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm bg-black border border-secondary rounded-pill">
+                                                <button class="btn btn-dark text-white px-2" @onclick="() => item.Cantidad--">-</button>
+                                                <span class="btn btn-dark disabled text-white fw-bold px-3">@item.Cantidad</span>
+                                                <button class="btn btn-dark text-white px-2" @onclick="() => item.Cantidad++">+</button>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">RD$ @item.Precio.ToString("N2")</td>
+                                        <td class="text-end pe-4 fw-bold text-info">RD$ @(item.Total.ToString("N2"))</td>
+                                        <td><button class="btn btn-sm btn-link text-danger p-0" @onclick="() => Carrito.Remove(item)"><i class="bi bi-trash"></i></button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="h-100 d-flex flex-column align-items-center justify-content-center text-white-50">
+                            <i class="bi bi-cart-x display-1 mb-3"></i>
+                            <h4>El carrito está vacío</h4>
+                            <p>Busque un producto para iniciar la venta.</p>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -82,7 +102,7 @@
         <div class="col-md-4 p-4 bg-black h-100 border-start border-secondary">
             <div class="d-flex flex-column h-100 justify-content-between">
                 <div>
-                    <h5 class="text-warning fw-bold mb-4">RESUMEN DE VENTA</h5>
+                    <h5 class="text-warning fw-bold mb-4"><i class="bi bi-receipt me-2"></i> RESUMEN DE VENTA</h5>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-white-50 small">Subtotal:</span>
                         <span>RD$ @(Subtotal.ToString("N2"))</span>
@@ -101,9 +121,14 @@
                 <div>
                     @if (ventaExitosa)
                     {
-                        <div class="alert alert-success border-0 rounded-4 shadow mb-4">
-                            <h6 class="fw-bold"><i class="bi bi-check-circle-fill me-2"></i> ¡Cobro Realizado!</h6>
-                            <small>Factura enviada al correo del cliente.</small>
+                        <div class="alert alert-success border-0 rounded-4 shadow mb-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-check-circle-fill fs-2 me-3"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-0">¡Cobro Exitoso!</h6>
+                                    <small>Venta registrada y factura enviada.</small>
+                                </div>
+                            </div>
                         </div>
                     }
 
@@ -115,16 +140,136 @@
                         </div>
                     }
                     
-                    <button class="btn btn-success btn-lg w-100 py-4 fw-bold shadow-lg rounded-4 mb-3" @onclick="Cobrar" disabled="@(!Carrito.Any() || cargando)">
+                    <button class="btn btn-success btn-lg w-100 py-4 fw-bold shadow-lg rounded-4 mb-3 fs-4" @onclick="Cobrar" disabled="@(!Carrito.Any() || cargando)">
                         @if (cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                        <i class="bi bi-printer me-2"></i> COBRAR E IMPRIMIR
+                        <i class="bi bi-printer me-2"></i> COBRAR (F10)
                     </button>
-                    <button class="btn btn-outline-secondary w-100 rounded-pill" @onclick="() => Carrito.Clear()">Limpiar Carrito</button>
+                    <button class="btn btn-outline-secondary w-100 rounded-pill" @onclick="() => Carrito.Clear()">Vaciar Carrito</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Modal Registrar Gasto -->
+@if (mostrarModalGasto)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.8);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border-secondary rounded-4 shadow-lg">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-dash-circle me-2"></i> REGISTRAR GASTO / SALIDA</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => mostrarModalGasto = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white-50">MONTO (RD$)</label>
+                        <input type="number" class="form-control bg-black border-secondary text-white fs-3 fw-bold" @bind="nuevoGastoMonto" step="0.01" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-white-50">MOTIVO O CONCEPTO</label>
+                        <input type="text" class="form-control bg-black border-secondary text-white" @bind="nuevoGastoMotivo" placeholder="Ej: Pago de Delivery, Limpieza, Sencillo..." />
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="() => mostrarModalGasto = false">Cancelar</button>
+                    <button type="button" class="btn btn-danger px-4 fw-bold" @onclick="RegistrarGasto" disabled="@(nuevoGastoMonto <= 0 || string.IsNullOrEmpty(nuevoGastoMotivo) || cargando)">
+                        REGISTRAR SALIDA
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Cuadre de Caja (Print-friendly) -->
+@if (mostrarModalCierre && reporte != null)
+{
+    <div class="modal fade show d-block d-print-block" style="background: rgba(0,0,0,0.85);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-white text-dark border-0 rounded-4 shadow-lg overflow-hidden">
+                <div class="modal-header border-bottom bg-light py-3 d-print-none">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-file-earmark-bar-graph me-2"></i> CIERRE DE TURNO Y CUADRE</h5>
+                    <button type="button" class="btn-close" @onclick="() => mostrarModalCierre = false"></button>
+                </div>
+                <div class="modal-body p-0 overflow-auto" style="max-height: 80vh;">
+                    <div class="p-5" id="print-area">
+                        <div class="text-center mb-4">
+                            <h3 class="fw-bold mb-0">TRANSMISIONES MAG</h3>
+                            <p class="text-muted small mb-0">REPORTE DE CUADRE DE CAJA</p>
+                            <hr>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <small class="text-muted text-uppercase d-block">Terminal:</small>
+                                <span class="fw-bold">@reporte.NombreCaja</span>
+                            </div>
+                            <div class="col-6 text-end">
+                                <small class="text-muted text-uppercase d-block">Fecha/Hora:</small>
+                                <span class="fw-bold">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                        </div>
+
+                        <table class="table table-bordered mb-4">
+                            <tbody>
+                                <tr class="bg-light">
+                                    <td class="fw-bold">Saldo Inicial (Fondo)</td>
+                                    <td class="text-end fw-bold">RD$ @reporte.SaldoInicial.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td>(+) Ventas del Turno</td>
+                                    <td class="text-end">RD$ @reporte.TotalVentas.ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td>(-) Gastos y Salidas</td>
+                                    <td class="text-end text-danger">RD$ @reporte.TotalGastos.ToString("N2")</td>
+                                </tr>
+                                <tr class="bg-light fs-5">
+                                    <td class="fw-bold">Saldo Esperado en Caja</td>
+                                    <td class="text-end fw-bold text-success">RD$ @reporte.SaldoEsperado.ToString("N2")</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold border-bottom pb-2">DETALLE DE VENTAS</h6>
+                                @foreach(var v in reporte.VentasRecientes) {
+                                    <div class="d-flex justify-content-between small border-bottom py-1">
+                                        <span>@v.NumeroFactura</span>
+                                        <span>RD$ @v.Total.ToString("N2")</span>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold border-bottom pb-2">DETALLE DE GASTOS</h6>
+                                @foreach(var g in reporte.GastosDelDia) {
+                                    <div class="d-flex justify-content-between small border-bottom py-1">
+                                        <span>@g.Motivo</span>
+                                        <span class="text-danger">RD$ @g.Monto.ToString("N2")</span>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="bg-light p-4 rounded-3 border d-print-none">
+                            <label class="form-label fw-bold small">MONTO REAL CONTADO EN EFECTIVO</label>
+                            <input type="number" class="form-control form-control-lg fw-bold" @bind="montoFinalReal" />
+                            <div class="mt-2 small text-muted">La diferencia será calculada automáticamente al cerrar.</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light d-print-none">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="ImprimirCuadre"><i class="bi bi-printer me-2"></i>Imprimir Borrador</button>
+                    <button type="button" class="btn btn-success px-5 fw-bold" @onclick="CerrarCaja" disabled="@cargando">
+                        FINALIZAR TURNO Y CERRAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private List<VentaItem> Carrito = new();
@@ -132,65 +277,80 @@
     private string busqueda = "";
     private bool cargando = false;
     private bool ventaExitosa = false;
+    private string? mensajeError;
 
     private IEnumerable<Producto> productosFiltrados => 
-        Inventario.Where(p => p.Descripcion_producto.Contains(busqueda, StringComparison.OrdinalIgnoreCase));
+        string.IsNullOrEmpty(busqueda) 
+            ? Enumerable.Empty<Producto>() 
+            : Inventario.Where(p => p.Descripcion_producto.Contains(busqueda, StringComparison.OrdinalIgnoreCase));
 
     private decimal Subtotal => Carrito.Sum(x => x.Total);
     private decimal Itbis => Subtotal * 0.18m;
     private decimal Total => Subtotal + Itbis;
 
-    private bool cajaAbierta = true; // Por defecto asumimos abierta para el prototipo
-    private bool mostrarModalApertura = false;
     private bool mostrarModalCierre = false;
-    private decimal montoInicial = 0;
+    private bool mostrarModalGasto = false;
     private decimal montoFinalReal = 0;
+    private ReporteCajaResponse? reporte;
+
+    private decimal nuevoGastoMonto = 0;
+    private string nuevoGastoMotivo = "";
 
     protected override async Task OnInitializedAsync()
     {
         await CargarInventario();
-        await VerificarEstadoCaja();
     }
 
-    private async Task VerificarEstadoCaja()
-    {
-        // En un escenario real, llamaríamos a api/cajas/1 para ver su estado
-        // Por ahora, simularemos que si no hay un turno iniciado, pedimos apertura.
-        mostrarModalApertura = !cajaAbierta;
-    }
-
-    private async Task AbrirCaja()
+    private async Task MostrarReporteCuadre()
     {
         try {
             cargando = true;
-            var res = await Http.PostAsJsonAsync($"api/cajas/1/abrir?idUsuario=1&saldoInicial={montoInicial}", new { });
-            if (res.IsSuccessStatusCode) {
-                cajaAbierta = true;
-                mostrarModalApertura = false;
+            // Capa de integración para resiliencia
+            reporte = await Http.GetFromJsonAsync<ReporteCajaResponse>("api/integracion/cajas/1/reporte");
+            if (reporte != null) {
+                montoFinalReal = reporte.SaldoEsperado;
+                mostrarModalCierre = true;
             }
-        } finally { cargando = false; }
+        } catch { mensajeError = "No se pudo generar el reporte de cuadre."; }
+        finally { cargando = false; }
     }
+
+    private async Task RegistrarGasto()
+    {
+        try {
+            cargando = true;
+            var req = new { IdUsuario = 1, Monto = nuevoGastoMonto, Tipo = "Salida", Motivo = nuevoGastoMotivo };
+            // Capa de integración para resiliencia
+            var res = await Http.PostAsJsonAsync("api/integracion/cajas/1/movimiento", req);
+            if (res.IsSuccessStatusCode) {
+                mostrarModalGasto = false;
+                nuevoGastoMonto = 0; nuevoGastoMotivo = "";
+                await JS.InvokeVoidAsync("alert", "Gasto registrado correctamente.");
+            }
+        } catch { mensajeError = "Error al registrar el gasto."; }
+        finally { cargando = false; }
+    }
+
+    private async Task ImprimirCuadre() => await JS.InvokeVoidAsync("window.print");
 
     private async Task CerrarCaja()
     {
         try {
             cargando = true;
-            var res = await Http.PostAsJsonAsync($"api/cajas/1/cerrar?idUsuario=1&saldoFinal={montoFinalReal}", new { });
-            if (res.IsSuccessStatusCode) {
-                cajaAbierta = false;
-                Navigation.NavigateTo("/");
-            }
-        } finally { cargando = false; }
+            // Capa de integración para resiliencia
+            var res = await Http.PostAsJsonAsync($"api/integracion/cajas/1/cerrar", new { IdUsuario = 1, SaldoFinal = montoFinalReal });
+            if (res.IsSuccessStatusCode) Navigation.NavigateTo("/");
+        } catch { mensajeError = "Error al cerrar caja."; }
+        finally { cargando = false; }
     }
-
-    private void MostrarModalCierre() => mostrarModalCierre = true;
 
     private async Task CargarInventario()
     {
         try {
             cargando = true;
-            Inventario = await Http.GetFromJsonAsync<List<Producto>>("api/productos") ?? new();
-        } catch { /* Manejar error de conexión */ }
+            // Cargamos desde el caché local del integrador
+            Inventario = await Http.GetFromJsonAsync<List<Producto>>("api/integracion/productos/cache") ?? new();
+        } catch { }
         finally { cargando = false; }
     }
 
@@ -204,16 +364,22 @@
 
     private async Task Cobrar()
     {
-        cargando = true;
-        ventaExitosa = false;
-        
-        // Simulación de llamada a la API de Facturación que creamos
-        // await Http.PostAsJsonAsync("api/facturas/emitir", new { ... });
-        
-        await Task.Delay(1000); // Simulamos la red
-        ventaExitosa = true;
-        Carrito.Clear();
-        cargando = false;
+        try {
+            cargando = true; ventaExitosa = false; mensajeError = null;
+            var request = new { 
+                IdCliente = 1, 
+                IdCaja = 1, 
+                IdEmpleado = 1, 
+                Items = Carrito.Select(x => new { IdProducto = x.Id, Cantidad = x.Cantidad }).ToList(), 
+                EmailNotificacion = "cliente_mostrador@mag.com" 
+            };
+            // Capa de integración para resiliencia
+            var res = await Http.PostAsJsonAsync("api/integracion/facturas/venta-rapida", request);
+            if (res.IsSuccessStatusCode) {
+                ventaExitosa = true; Carrito.Clear();
+            } else { mensajeError = "No se pudo procesar el cobro."; }
+        } catch { mensajeError = "Error de sistema."; }
+        finally { cargando = false; }
     }
 
     public class VentaItem
@@ -227,34 +393,11 @@
 }
 
 <style>
-    .table-dark {
-        --bs-table-bg: transparent;
+    @@media print {
+        body * { visibility: hidden; }
+        #print-area, #print-area * { visibility: visible; }
+        #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        .modal { position: absolute !important; }
     }
-</style>
-
-        }
-        catch (Exception ex)
-        {
-            mensajeError = "Error de sistema: " + ex.Message;
-        }
-        finally 
-        {
-            cargando = false;
-        }
-    }
-
-    public class VentaItem
-    {
-        public int Id { get; set; }
-        public string Nombre { get; set; } = "";
-        public int Cantidad { get; set; }
-        public decimal Precio { get; set; }
-        public decimal Total => Cantidad * Precio;
-    }
-}
-
-<style>
-    .table-dark {
-        --bs-table-bg: transparent;
-    }
+    .table-dark { --bs-table-bg: transparent; }
 </style>

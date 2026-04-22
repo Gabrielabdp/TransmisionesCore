@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TransmisionesCore.UseCases;
+using TransmisionesCore.Entities;
 
 namespace TransmisionesAPI.Controllers;
 
@@ -33,6 +34,21 @@ public class FacturasController : ControllerBase
             return BadRequest(new { mensaje = ex.Message });
         }
     }
+
+    [HttpPost("venta-rapida")]
+    public async Task<IActionResult> VentaRapida([FromBody] VentaRapidaRequest request)
+    {
+        try
+        {
+            var factura = await _useCases.VentaRapidaAsync(request);
+            return Ok(factura);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+    }
+
 
     public class EmitirFacturaRequest
     {

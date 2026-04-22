@@ -29,3 +29,35 @@ public record AjustarStockRequest(
     string TipoAjuste,
     int Cantidad,
     string? Motivo = null);
+
+public record VentaRapidaRequest(
+    int IdCliente, int IdCaja, int IdEmpleado,
+    List<VentaRapidaItemRequest> Items,
+    string? EmailNotificacion = null);
+
+public record VentaRapidaItemRequest(int IdProducto, int Cantidad);
+
+public record ReporteCajaResponse(
+    int IdCaja,
+    string NombreCaja,
+    decimal SaldoInicial,
+    decimal TotalVentas,
+    decimal TotalITBIS,
+    decimal TotalGastos,
+    decimal SaldoEsperado,
+    List<VentaResumenDto> VentasRecientes,
+    List<GastoResumenDto> GastosDelDia
+);
+
+public record VentaResumenDto(string NumeroFactura, decimal Total, DateTime Fecha);
+public record GastoResumenDto(string Motivo, decimal Monto, DateTime Fecha);
+
+public record RegistrarMovimientoDto(
+    int IdUsuario,
+    decimal Monto,
+    string Tipo,
+    string Motivo
+);
+
+
+

@@ -45,6 +45,10 @@ builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 
+// Services
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<PdfService>();
+
 
 // Use Cases
 builder.Services.AddScoped<AutenticacionUseCase>();
@@ -77,15 +81,6 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
-
-// Test Endpoint
-// Test Endpoint para validar Relaciones del Core
-app.MapPruebasDb(); // <--- Solo esta l�nea limpia
-
-app.Run();
-
-
-MapPruebasDb(); // <--- Solo esta l�nea limpia
 
 app.Run();
 

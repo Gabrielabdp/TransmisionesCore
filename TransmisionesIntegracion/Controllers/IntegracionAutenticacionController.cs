@@ -11,12 +11,12 @@ namespace TransmisionesIntegracion.Controllers
     [ApiController]
     public class IntegracionAutenticacionController : ControllerBase
     {
-        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly HttpClient _httpClient;
         private readonly IntegracionDbContext _context;
 
-        public IntegracionAutenticacionController(IHttpClientFactory httpClientFactory, IntegracionDbContext context)
+        public IntegracionAutenticacionController(HttpClient httpClient, IntegracionDbContext context)
         {
-            _httpClientFactory = httpClientFactory;
+            _httpClient = httpClient;
             _context = context;
         }
 
@@ -25,11 +25,10 @@ namespace TransmisionesIntegracion.Controllers
         {
             try
             {
-                var cliente = _httpClientFactory.CreateClient();
-                cliente.Timeout = TimeSpan.FromSeconds(5); // Timeout corto para detectar rápido la caída
+                _httpClient.Timeout = TimeSpan.FromSeconds(5); // Timeout corto para detectar rápido la caída
 
                 var jsonContent = new StringContent(JsonSerializer.Serialize(request), Encoding.UTF8, "application/json");
-                var respuesta = await cliente.PostAsync("https://localhost:56678/api/Autenticacion/login", jsonContent);
+                var respuesta = await _httpClient.PostAsync("https://localhost:56678/api/Autenticacion/login", jsonContent);
 
                 if (respuesta.IsSuccessStatusCode)
                 {

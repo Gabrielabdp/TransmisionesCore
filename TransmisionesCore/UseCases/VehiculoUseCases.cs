@@ -30,4 +30,9 @@ public class VehiculoUseCases
 
         return await _repo.ObtenerPorMatriculaAsync(matricula);
     }
+
+    public async Task EliminarVehiculoAsync(string matricula)
+    {
+        await _repo.EliminarAsync(matricula);
+    }
 }
