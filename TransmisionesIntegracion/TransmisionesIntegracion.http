@@ -1,6 +1,74 @@
-@TransmisionesIntegracion_HostAddress = http://localhost:5176
+@TransmisionesIntegracion_HostAddress = https://localhost:7001
 
-GET {{TransmisionesIntegracion_HostAddress}}/weatherforecast/
+### Estado del sistema
+GET {{TransmisionesIntegracion_HostAddress}}/api/integracion/estado
 Accept: application/json
+
+###
+
+### Buscar cliente por documento (reemplazar con cédula real)
+GET {{TransmisionesIntegracion_HostAddress}}/api/integracion/clientes/buscar/001-0000000-1
+Accept: application/json
+
+###
+
+### Obtener factura por ID (reemplazar con ID real)
+GET {{TransmisionesIntegracion_HostAddress}}/api/integracion/facturas/1
+Accept: application/json
+
+###
+
+### Enviar factura por email
+POST {{TransmisionesIntegracion_HostAddress}}/api/integracion/facturas/1/enviar-email
+
+###
+
+### Registrar gasto en caja
+POST {{TransmisionesIntegracion_HostAddress}}/api/integracion/cajas/1/gasto
+Content-Type: application/json
+
+{
+  "concepto": "Materiales de limpieza",
+  "monto": 350.00
+}
+
+###
+
+### Login de empleado
+POST {{TransmisionesIntegracion_HostAddress}}/api/integracion/autenticacion/login
+Content-Type: application/json
+
+{
+  "usuario": "EMP-001",
+  "password": "contraseña"
+}
+
+###
+
+### Abrir caja
+POST {{TransmisionesIntegracion_HostAddress}}/api/integracion/cajas/1/abrir
+Content-Type: application/json
+
+{
+  "idUsuario": 1,
+  "saldoInicial": 5000.00
+}
+
+###
+
+### Estado actual de caja
+GET {{TransmisionesIntegracion_HostAddress}}/api/integracion/cajas/1/estado-actual
+Accept: application/json
+
+###
+
+### Cerrar caja
+POST {{TransmisionesIntegracion_HostAddress}}/api/integracion/cajas/1/cerrar
+Content-Type: application/json
+
+{
+  "idUsuario": 1,
+  "saldoFinal": 6500.00
+}
 
 ###
