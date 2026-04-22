@@ -1,0 +1,83 @@
+@page "/cliente/ordenes"
+@layout MainLayout
+@rendermode InteractiveServer
+@inject ApiIntegracionClient Api
+@inject SessionStateService Session
+
+<ClienteAuthGuard>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold mb-0"><i class="bi bi-clipboard-list me-2 text-warning"></i>Mis Órdenes</h3>
+        <a href="/cliente/facturas" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-receipt me-1"></i>Ver Facturas
+        </a>
+    </div>
+
+    @if (_cargando)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p class="mt-2 text-muted">Cargando órdenes...</p>
+        </div>
+    }
+    else if (!_ordenes.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>No tienes órdenes registradas aún.
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var orden in _ordenes)
+            {
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold mb-1">
+                                    <i class="bi bi-car-front me-2 text-muted"></i>
+                                    @(orden.Matricula_vehiculo ?? "Vehículo") — @(orden.Modelo_vehiculo ?? "")
+                                </h6>
+                                <small class="text-muted">
+                                    Ingresado: @orden.Fecha_ingreso.ToString("dd/MM/yyyy")
+                                </small>
+                            </div>
+                            <div class="d-flex flex-column align-items-end gap-2">
+                                <span class="badge rounded-pill @BadgeClass(orden.Estado) px-3">
+                                    @orden.Estado
+                                </span>
+                                @if (orden.Estado == "Entregada")
+                                {
+                                    <a href="/cliente/factura/@orden.Id_orden" class="btn btn-sm btn-outline-success rounded-pill">
+                                        <i class="bi bi-receipt me-1"></i>Ver Factura
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</ClienteAuthGuard>
+
+@code {
+    private List<OrdenDto> _ordenes = new();
+    private bool _cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.ClienteId.HasValue)
+            _ordenes = await Api.GetOrdenesPorClienteAsync(Session.ClienteId.Value);
+        _cargando = false;
+    }
+
+    private static string BadgeClass(string estado) => estado switch
+    {
+        "En proceso"  => "bg-warning text-dark",
+        "Lista"       => "bg-info text-dark",
+        "Entregada"   => "bg-success",
+        "Cancelada"   => "bg-secondary",
+        _             => "bg-secondary"
+    };
+}

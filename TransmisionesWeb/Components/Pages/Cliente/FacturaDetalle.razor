@@ -1,0 +1,132 @@
+@page "/cliente/factura/{IdOrden:int}"
+@layout MainLayout
+@rendermode InteractiveServer
+@inject ApiIntegracionClient Api
+@inject SessionStateService Session
+@inject IJSRuntime JS
+
+<ClienteAuthGuard>
+    @if (_cargando)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-warning"></div></div>
+    }
+    else if (_factura is null)
+    {
+        <div class="alert alert-warning">
+            <i class="bi bi-wifi-off me-2"></i>
+            Factura no disponible en este momento. Se requiere conexión a internet.
+            <button class="btn btn-sm btn-warning ms-3" @onclick="CargarFactura">Reintentar</button>
+        </div>
+    }
+    else
+    {
+        <div class="d-print-none d-flex gap-2 mb-3">
+            <button class="btn btn-dark rounded-pill" @onclick="Imprimir">
+                <i class="bi bi-printer me-2"></i>Imprimir
+            </button>
+            <button class="btn btn-outline-success rounded-pill" @onclick="EnviarEmail"
+                    disabled="@_enviandoEmail">
+                @if (_enviandoEmail)
+                { <span class="spinner-border spinner-border-sm me-1"></span> }
+                <i class="bi bi-envelope me-2"></i>Enviar al correo
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_mensajeEmail))
+        {
+            <div class="alert @AlertEmailClass d-print-none small">
+                @_mensajeEmail
+            </div>
+        }
+
+        <div class="card border-0 shadow rounded-4" id="factura-print">
+            <div class="card-header bg-dark text-white text-center py-4">
+                <h3 class="fw-bold mb-0">Transmisiones MAG</h3>
+                <p class="mb-0 text-white-50 small">Santo Domingo, República Dominicana</p>
+            </div>
+            <div class="card-body p-4">
+                <div class="row mb-4">
+                    <div class="col-6">
+                        <small class="text-muted fw-bold">FACTURA</small>
+                        <p class="mb-0 fw-bold fs-5">#@_factura.Numero_factura</p>
+                    </div>
+                    <div class="col-6 text-end">
+                        <small class="text-muted fw-bold">FECHA</small>
+                        <p class="mb-0">@_factura.Fecha_emision.ToString("dd/MM/yyyy")</p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <small class="text-muted fw-bold">CLIENTE</small>
+                    <p class="mb-0 fw-bold">@_factura.NombreCliente</p>
+                    @if (!string.IsNullOrEmpty(_factura.CorreoCliente))
+                    {
+                        <p class="mb-0 small text-muted">@_factura.CorreoCliente</p>
+                    }
+                </div>
+                <table class="table table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Descripción</th>
+                            <th class="text-end">Cant.</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-end">Sub.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in _factura.Detalles)
+                        {
+                            <tr>
+                                <td>@d.Descripcion</td>
+                                <td class="text-end">@d.Cantidad</td>
+                                <td class="text-end">RD$ @d.PrecioUnitario.ToString("N2")</td>
+                                <td class="text-end">RD$ @d.Subtotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><td colspan="3" class="text-end fw-bold">Subtotal</td><td class="text-end">RD$ @_factura.Subtotal.ToString("N2")</td></tr>
+                        <tr><td colspan="3" class="text-end fw-bold">ITBIS (18%)</td><td class="text-end">RD$ @_factura.ITBIS.ToString("N2")</td></tr>
+                        <tr class="table-dark fw-bold fs-5">
+                            <td colspan="3" class="text-end">TOTAL</td>
+                            <td class="text-end">RD$ @_factura.Total.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <p class="text-center text-muted small mt-3">Tipo: @_factura.Tipo_factura · Gracias por preferirnos</p>
+            </div>
+        </div>
+    }
+</ClienteAuthGuard>
+
+@code {
+    [Parameter] public int IdOrden { get; set; }
+
+    private FacturaDto? _factura;
+    private bool _cargando = true;
+    private bool _enviandoEmail = false;
+    private string _mensajeEmail = string.Empty;
+    private bool _emailExito = false;
+
+    private string AlertEmailClass => _emailExito ? "alert-success" : "alert-danger";
+
+    protected override async Task OnInitializedAsync() => await CargarFactura();
+
+    private async Task CargarFactura()
+    {
+        _cargando = true;
+        _factura = await Api.GetFacturaAsync(IdOrden);
+        _cargando = false;
+    }
+
+    private async Task Imprimir() => await JS.InvokeVoidAsync("window.print");
+
+    private async Task EnviarEmail()
+    {
+        if (_factura is null) return;
+        _enviandoEmail = true;
+        var (exito, msg) = await Api.EnviarFacturaPorEmailAsync(_factura.Id_factura);
+        _emailExito = exito;
+        _mensajeEmail = msg;
+        _enviandoEmail = false;
+    }
+}
