@@ -120,16 +120,23 @@ namespace TransmisionesIntegracion.Controllers
         [HttpPost("{idCaja}/gasto")]
         public async Task<IActionResult> RegistrarGasto(int idCaja, [FromBody] GastoIntegracionDto peticion)
         {
-            var payload = new { IdCaja = idCaja, Concepto = peticion.Concepto, Monto = peticion.Monto };
-            _context.TransaccionesPendientes.Add(new TransmisionesIntegracion.Models.TransaccionPendiente
+            try
             {
-                TipoTransaccion = "RegistrarGasto",
-                DatosJson = System.Text.Json.JsonSerializer.Serialize(payload),
-                FechaIntento = DateTime.Now,
-                Sincronizado = false
-            });
-            await _context.SaveChangesAsync();
-            return Ok(new { exito = true, mensaje = "Gasto registrado." });
+                var payload = new { IdCaja = idCaja, Concepto = peticion.Concepto, Monto = peticion.Monto };
+                _context.TransaccionesPendientes.Add(new TransaccionPendiente
+                {
+                    TipoTransaccion = "RegistrarGasto",
+                    DatosJson = System.Text.Json.JsonSerializer.Serialize(payload),
+                    FechaIntento = DateTime.Now,
+                    Sincronizado = false
+                });
+                await _context.SaveChangesAsync();
+                return Ok(new { exito = true, mensaje = "Gasto registrado." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { mensaje = $"Error al registrar el gasto: {ex.Message}" });
+            }
         }
 
 
