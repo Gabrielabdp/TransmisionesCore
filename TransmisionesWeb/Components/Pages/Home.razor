@@ -1,7 +1,36 @@
-﻿@page "/"
+@page "/"
+@layout MainLayout
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<div class="text-center py-5">
+    <i class="bi bi-gear-fill display-1 text-warning"></i>
+    <h1 class="fw-bold mt-3">Transmisiones MAG</h1>
+    <p class="lead text-muted">Tu taller de confianza para transmisiones vehiculares</p>
+    <a href="/login" class="btn btn-dark btn-lg px-5 mt-3 rounded-pill">
+        Ver mis órdenes <i class="bi bi-arrow-right ms-2"></i>
+    </a>
+</div>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
+<div class="row g-4 mt-5">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 text-center p-4">
+            <i class="bi bi-tools display-4 text-warning mb-3"></i>
+            <h5 class="fw-bold">Reparaciones</h5>
+            <p class="text-muted small">Diagnóstico y reparación de transmisiones automáticas y manuales.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 text-center p-4">
+            <i class="bi bi-clipboard-check display-4 text-warning mb-3"></i>
+            <h5 class="fw-bold">Seguimiento</h5>
+            <p class="text-muted small">Consulta el estado de tu vehículo en tiempo real.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 text-center p-4">
+            <i class="bi bi-receipt display-4 text-warning mb-3"></i>
+            <h5 class="fw-bold">Facturas digitales</h5>
+            <p class="text-muted small">Recibe tus facturas directamente en tu correo electrónico.</p>
+        </div>
+    </div>
+</div>
