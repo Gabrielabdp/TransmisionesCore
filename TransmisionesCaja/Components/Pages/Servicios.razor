@@ -1,0 +1,345 @@
+@page "/servicios"
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Services
+@inject ApiService Api
+@inject AuthService Auth
+@rendermode InteractiveServer
+
+<div style="width: 100%; min-height: 100vh; padding-bottom: 40px;">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                Servicios
+                <span class="page-count">· @servicios.Count</span>
+            </h1>
+            <p class="page-subtitle">Gestiona el catálogo de servicios disponibles</p>
+        </div>
+        @if (Auth.EsAdmin())
+        {
+            <button class="btn-primary" @onclick="AbrirNuevo">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Nuevo Servicio
+            </button>
+        }
+    </div>
+
+    @if (cargando)
+    {
+        <div class="loading">Cargando servicios...</div>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Servicio</th>
+                        <th>Categoría</th>
+                        <th>Descripción</th>
+                        <th style="text-align: right;">Precio Base</th>
+                        <th>Estado</th>
+                        @if (Auth.EsAdmin())
+                        {
+                            <th style="text-align:right;">Acciones</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in servicios)
+                    {
+                        <tr>
+                            <td class="td-mono">#@s.Id_servicio.ToString("D2")</td>
+                            <td>
+                                <div class="service-main-text">@s.Nombre_servicio</div>
+                            </td>
+                            <td>
+                                <span class="badge-v2 @GetTipoBadge(s.TipoServicio)">@s.TipoServicio</span>
+                            </td>
+                            <td>
+                                <div class="description-text" title="@s.Descripcion">
+                                    @(s.Descripcion ?? "—")
+                                </div>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="price-container">
+                                    <span class="currency">RD$</span>
+                                    <span class="amount">@s.Precio_base.ToString("N0")</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="status-pill @(s.Activo ? "active" : "inactive")">
+                                    <span class="status-dot"></span>
+                                    @(s.Activo ? "Activo" : "Inactivo")
+                                </div>
+                            </td>
+                            @if (Auth.EsAdmin())
+                            {
+                                <td>
+                                    <div class="td-actions" style="justify-content: flex-end;">
+                                        <button class="btn-icon-v2" @onclick="() => AbrirEditar(s)" title="Editar">
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                        </button>
+                                        <button class="btn-icon-v2 @(s.Activo ? "danger" : "success")" @onclick="() => CambiarEstado(s)">
+                                            @if (s.Activo)
+                                            {
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                            }
+                                            else
+                                            {
+                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                            }
+                                        </button>
+                                    </div>
+                                </td>
+                            }
+                        </tr>
+                    }
+                    @if (!servicios.Any())
+                    {
+                        <tr><td colspan="7"><div class="empty-state" style="padding:40px; text-align:center; color:#64748b;">No hay servicios registrados</div></td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (mostrarModal)
+    {
+        <div class="modal-overlay" @onclick="CerrarModal">
+            <div class="modal" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <div>
+                        <h2 class="modal-title" style="margin:0; font-size:18px; color:#f8fafc;">@(esNuevo ? "Nuevo Servicio" : "Editar Servicio")</h2>
+                        <p class="modal-subtitle" style="margin:4px 0 0; font-size:13px; color:#94a3b8;">@(esNuevo ? "Registra un nuevo servicio en el catálogo" : "Modifica los detalles del servicio")</p>
+                    </div>
+                    <button class="btn-close-modal" @onclick="CerrarModal" style="background:none; border:none; color:#94a3b8; cursor:pointer;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:24px;height:24px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div class="modal-deco-line" style="height:2px; background:linear-gradient(to right, #38bdf8, transparent); margin-top:16px;"></div>
+                <div class="modal-body" style="padding:24px;">
+                    @if (!string.IsNullOrEmpty(mensajeError))
+                    {
+                        <div class="alert-error" style="margin-bottom:16px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2); color:#f87171; padding:12px; border-radius:8px; display:flex; gap:8px; align-items:center;">
+                            <svg fill="currentColor" viewBox="0 0 20 20" style="width:16px;height:16px;flex-shrink:0;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>
+                            <span>@mensajeError</span>
+                        </div>
+                    }
+
+                    <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:6px;">
+                            <label class="form-label" style="font-size:13px; font-weight:600; color:#cbd5e1;">Nombre del Servicio *</label>
+                            <input @bind="form.NombreServicio" class="input-field" placeholder="Ej: Alineación computarizada" style="padding:10px; background:#1e293b; border:1px solid #334155; border-radius:8px; color:white;" />
+                        </div>
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:6px;">
+                            <label class="form-label" style="font-size:13px; font-weight:600; color:#cbd5e1;">Categoría *</label>
+                            <select @bind="form.IdTipoServicio" class="input-field" style="padding:10px; background:#1e293b; border:1px solid #334155; border-radius:8px; color:white;">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var t in tiposServicio)
+                                {
+                                    <option value="@t.Id_tipo_servicio">@t.Descripcion</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2; display:flex; flex-direction:column; gap:6px;">
+                            <label class="form-label" style="font-size:13px; font-weight:600; color:#cbd5e1;">Descripción</label>
+                            <textarea @bind="form.Descripcion" class="input-field" style="padding:10px; background:#1e293b; border:1px solid #334155; border-radius:8px; color:white; min-height:80px; resize:vertical;" placeholder="Breve descripción de lo que incluye el servicio..."></textarea>
+                        </div>
+                        <div class="form-group" style="display:flex; flex-direction:column; gap:6px;">
+                            <label class="form-label" style="font-size:13px; font-weight:600; color:#cbd5e1;">Precio Base (RD$) *</label>
+                            <input type="number" @bind="form.PrecioBase" class="input-field" min="0" step="0.01" style="padding:10px; background:#1e293b; border:1px solid #334155; border-radius:8px; color:white;" />
+                        </div>
+                    </div>
+
+                    <div class="modal-footer" style="margin-top:24px; padding-top:20px; border-top:1px solid rgba(255,255,255,0.05); display:flex; justify-content:flex-end; gap:12px;">
+                        <button class="btn-secondary" @onclick="CerrarModal" style="padding:10px 20px; background:#334155; color:white; border:none; border-radius:8px; cursor:pointer;">Cancelar</button>
+                        <button class="btn-primary" @onclick="Guardar" disabled="@guardando">
+                            @(guardando ? "Guardando..." : "Guardar Servicio")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* 1. Nombre del Servicio (Legibilidad Máxima) */
+    .service-main-text {
+        font-weight: 700;
+        color: #f8fafc; /* Blanco brillante para destacar en fondo oscuro */
+        font-size: 15px;
+        letter-spacing: 0.01em;
+    }
+
+    /* 2. Precios (Estilo Financiero) */
+    .price-container {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+        font-family: 'JetBrains Mono', monospace; /* Fuente técnica */
+    }
+    .price-container .currency {
+        font-size: 11px;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+    .price-container .amount {
+        font-size: 15px;
+        font-weight: 700;
+        color: #38bdf8; /* Color acento para dinero */
+    }
+
+    /* 3. Descripción (Texto secundario) */
+    .description-text {
+        max-width: 250px;
+        color: #94a3b8;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* 4. Badges de Categoría (Píldoras) */
+    .badge-v2 {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+    }
+    .badge-blue { background: rgba(37, 99, 235, 0.1); color: #60a5fa; border-color: rgba(37, 99, 235, 0.2); }
+    .badge-purple { background: rgba(124, 58, 237, 0.1); color: #a78bfa; border-color: rgba(124, 58, 237, 0.2); }
+    .badge-amber { background: rgba(217, 119, 6, 0.1); color: #fbbf24; border-color: rgba(217, 119, 6, 0.2); }
+    .badge-cyan { background: rgba(8, 145, 178, 0.1); color: #22d3ee; border-color: rgba(8, 145, 178, 0.2); }
+
+    /* 5. Estados (Indicador Visual) */
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-pill.active { background: rgba(34, 197, 94, 0.1); color: #4ade80; }
+    .status-pill.inactive { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+    .active .status-dot { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .inactive .status-dot { background: #ef4444; }
+
+    /* 6. Mejoras Generales de la Tabla */
+    .custom-table { width: 100%; border-collapse: collapse; }
+    .custom-table th {
+        text-align: left;
+        padding: 16px;
+        color: #64748b;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        border-bottom: 1px solid #1e293b;
+    }
+    .custom-table td { padding: 16px; vertical-align: middle; border-bottom: 1px solid #0f172a; }
+    .td-mono { font-family: monospace; color: #64748b; font-size: 13px; }
+
+    /* Botones de acción mejorados */
+    .btn-icon-v2 {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        padding: 6px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    .btn-icon-v2:hover { background: #1e293b; color: #f8fafc; }
+    .btn-icon-v2.danger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .btn-icon-v2.success:hover { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .btn-icon-v2 svg { width: 18px; height: 18px; }
+</style>
+
+@code {
+    List<ServicioDto> servicios = new();
+    List<TipoServicioDto> tiposServicio = new();
+    bool cargando = true; bool mostrarModal = false; bool esNuevo = true; bool guardando = false;
+    int editId = 0;
+    string mensajeError = string.Empty;
+    ServicioForm form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            servicios = await Api.GetServiciosAsync();
+            tiposServicio = (await Api.GetCatalogosAsync()).TiposServicio;
+        }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
+        cargando = false;
+    }
+
+    void AbrirNuevo() { esNuevo = true; form = new(); mensajeError = string.Empty; mostrarModal = true; }
+    
+    void AbrirEditar(ServicioDto s)
+    {
+        esNuevo = false; editId = s.Id_servicio;
+        form = new()
+        {
+            NombreServicio = s.Nombre_servicio,
+            Descripcion = s.Descripcion,
+            PrecioBase = s.Precio_base,
+            IdTipoServicio = s.Id_tipo_servicio
+        };
+        mensajeError = string.Empty; mostrarModal = true;
+    }
+    
+    void CerrarModal() => mostrarModal = false;
+
+    async Task CambiarEstado(ServicioDto s)
+    {
+        var ok = await Api.CambiarEstadoServicioAsync(s.Id_servicio, !s.Activo);
+        if (ok) servicios = await Api.GetServiciosAsync();
+    }
+
+    async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(form.NombreServicio) || form.IdTipoServicio == 0 || form.PrecioBase <= 0)
+        { mensajeError = "Por favor, completa los campos obligatorios."; return; }
+
+        guardando = true;
+        bool ok = esNuevo
+            ? await Api.CrearServicioAsync(new { IdTipoServicio = form.IdTipoServicio, NombreServicio = form.NombreServicio, Descripcion = form.Descripcion, PrecioBase = form.PrecioBase })
+            : await Api.ActualizarServicioAsync(editId, new { IdTipoServicio = form.IdTipoServicio, NombreServicio = form.NombreServicio, Descripcion = form.Descripcion, PrecioBase = form.PrecioBase });
+
+        guardando = false;
+        if (ok) 
+        { 
+            servicios = await Api.GetServiciosAsync(); 
+            CerrarModal(); 
+        }
+        else mensajeError = "Error al conectar con el servidor. Intenta de nuevo.";
+    }
+
+    string GetTipoBadge(string tipo) => tipo?.ToLower() switch
+    {
+        "mantenimiento" => "badge-blue",
+        "reparacion" or "reparación" => "badge-purple",
+        "diagnostico" or "diagnóstico" => "badge-amber",
+        "personalizacion" or "personalización" => "badge-cyan",
+        _ => "badge-blue"
+    };
+
+    class ServicioForm
+    {
+        public string NombreServicio { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public decimal PrecioBase { get; set; }
+        public int IdTipoServicio { get; set; }
+    }
+}

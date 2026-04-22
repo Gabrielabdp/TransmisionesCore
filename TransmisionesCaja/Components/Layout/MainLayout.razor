@@ -1,0 +1,287 @@
+@inherits LayoutComponentBase
+@using TransmisionesCaja.Auth
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@implements IDisposable
+
+@{
+    var nombreMostrar = AuthService.UsuarioActual?.NombreCompleto?.Trim() is { Length: > 0 } nc ? nc : AuthService.UsuarioActual?.Nombre_usuario ?? "?";
+    var inicial = nombreMostrar.Length > 0 ? nombreMostrar[0].ToString().ToUpper() : "?";
+    var rol = AuthService.UsuarioActual?.Rol ?? "";
+    var uri = Nav.Uri.ToLower();
+}
+
+<div class="layout-wrapper @temaClase">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <div class="logo-icon-wrap">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="logo-title">MAG</div>
+                    <span class="logo-badge">v2.0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="user-section">
+            <div class="user-card-compact">
+                <div class="user-avatar-simple">@inicial</div>
+                <div class="user-info-simple">
+                    <div class="user-name-simple">@nombreMostrar</div>
+                    <div class="user-role-simple">@rol</div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">MENÚ</div>
+            
+            <a href="/" class="nav-link @(uri.EndsWith("/") || uri.Contains("dashboard") ? "active" : "")">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="/sucursales" class="nav-link @(uri.Contains("sucursales") ? "active" : "")">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Sucursales</span>
+            </a>
+
+            <a href="/empleados" class="nav-link @(uri.Contains("empleados") ? "active" : "")">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Empleados</span>
+            </a>
+
+            <a href="/caja" class="nav-link @(uri.Contains("caja") ? "active" : "")">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Caja</span>
+            </a>
+
+            @* Sección de Servicios reemplazando a Configuración *@
+            <a href="/servicios" class="nav-link @(uri.Contains("servicios") ? "active" : "")">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Servicios</span>
+            </a>
+
+            <a href="/productos" class="nav-link @(uri.Contains("productos") ? "active" : "")">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span>Productos</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="btn-logout" @onclick="Logout">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                <span>Cerrar sesión</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <div class="breadcrumb">
+                <span class="breadcrumb-current">@GetPaginaActual()</span>
+            </div>
+            <div class="topbar-right">
+                <button class="topbar-btn" @onclick="ToggleTema" title="Cambiar tema">
+                    @if (temaOscuro) {
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                    } else {
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                    }
+                </button>
+                <div class="topbar-avatar-mini">@inicial</div>
+            </div>
+        </div>
+
+        <div class="content-area">@Body</div>
+    </main>
+</div>
+
+<style>
+    /* 1. VARIABLES DE COLOR DINÁMICAS */
+    .layout-wrapper.dark {
+        --bg-main: #0f172a;
+        --bg-card: #1e293b;
+        --text-primary: #ffffff;
+        --text-muted: #94a3b8;
+        --border-color: rgba(255, 255, 255, 0.1);
+        --topbar-bg: #0f172a;
+    }
+
+    .layout-wrapper.light {
+        --bg-main: #f8fafc;
+        --bg-card: #ffffff;
+        --text-primary: #0f172a;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --topbar-bg: #ffffff;
+    }
+
+    /* Aplicación global de colores basada en variables */
+    .main-content {
+        background: var(--bg-main) !important;
+        color: var(--text-primary) !important;
+    }
+
+    .content-area {
+        background: var(--bg-main) !important;
+    }
+
+    /* Forzar colores en todos los elementos de texto dentro del área de contenido */
+    ::deep .content-area h1, ::deep .content-area h2, ::deep .content-area h3, 
+    ::deep .content-area p, ::deep .content-area span, ::deep .content-area label,
+    ::deep .content-area td, ::deep .content-area th {
+        color: var(--text-primary) !important;
+    }
+
+    ::deep .content-area .text-muted {
+        color: var(--text-muted) !important;
+    }
+    /* 2. RESET Y ESTRUCTURA */
+    html, body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; overflow-x: hidden; background: #0f172a; }
+    .layout-wrapper { display: flex; min-height: 100vh; width: 100vw; transition: background 0.3s ease; background: var(--bg-main); }
+
+    /* 3. SIDEBAR */
+    .sidebar {
+        width: 260px; min-width: 260px;
+        background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #581c87 100%);
+        color: white; display: flex; flex-direction: column;
+        border-right: 1px solid rgba(255,255,255,0.05);
+        height: 100vh;
+        position: sticky; /* Cambiado de fixed a sticky */
+        top: 0;
+        z-index: 1000;
+    }
+    .sidebar-header { padding: 24px; }
+    .logo-area { display: flex; align-items: center; gap: 10px; }
+    .logo-icon-wrap { width: 32px; height: 32px; background: #3b82f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .logo-icon-wrap svg { width: 20px; color: white; }
+    .logo-title { font-weight: 800; font-size: 1.2rem; color: white; }
+    .logo-badge { font-size: 0.7rem; color: #60a5fa; font-weight: bold; }
+
+    /* Perfil Sidebar */
+    .user-section { padding: 0 16px 20px 16px; }
+    .user-card-compact { display: flex; align-items: center; gap: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 12px; }
+    .user-avatar-simple { width: 36px; height: 36px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; }
+    .user-name-simple { font-size: 0.85rem; font-weight: 600; color: white !important; }
+    .user-role-simple { font-size: 0.7rem; color: #94a3b8 !important; }
+
+    /* Nav Sidebar */
+    .sidebar-nav { flex: 1; padding: 0 12px; }
+    .nav-section-label { font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.3); margin: 20px 12px 10px 12px; text-transform: uppercase; letter-spacing: 1px; }
+    .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 16px; color: #94a3b8; text-decoration: none; border-radius: 10px; transition: all 0.2s ease; margin-bottom: 4px; font-size: 0.9rem; }
+    .nav-link:hover { background: rgba(255,255,255,0.05); color: white; }
+    .nav-link.active { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+
+    /* 4. ARREGLO GLOBAL PARA PRODUCTOS Y SERVICIOS (MODO CLARO) */
+.main-content { 
+    flex: 1; 
+    background: var(--bg-main); 
+    display: flex; 
+    flex-direction: column; 
+    min-width: 0; 
+    transition: background 0.3s;
+    width: 100%;
+    margin-left: 0 !important; /* Volver a pegar a la izquierda */
+    min-height: 100vh;
+}
+
+/* El selector ::deep permite que el estilo entre a los componentes del @Body */
+::deep .content-area { 
+    padding: 24px; 
+    flex: 1;
+    width: 100% !important;
+    max-width: 100% !important; 
+    margin: 0 !important; 
+    display: block !important;
+}
+        margin: 0 !important; 
+        display: block !important;
+    }
+
+    /* Forzar que contenedores internos de Bootstrap también se expandan */
+    ::deep .container, ::deep .container-fluid {
+        max-width: 100% !important;
+        padding-left: 0 !important;
+        margin-left: 0 !important;
+    }
+    /* Esta regla fuerza el color a TODO lo que esté dentro de la página cargada */
+    .layout-wrapper.light .content-area,
+    .layout-wrapper.light .content-area table,
+    .layout-wrapper.light .content-area td,
+    .layout-wrapper.light .content-area th,
+    .layout-wrapper.light .content-area span,
+    .layout-wrapper.light .content-area h1,
+    .layout-wrapper.light .content-area h2,
+    .layout-wrapper.light .content-area h3,
+    .layout-wrapper.light .content-area div:not(.logo-icon-wrap):not(.user-avatar-simple) {
+        color: #0f172a !important; /* Azul oscuro forzado */
+    }
+
+    /* Especial para los ID o códigos de Productos/Servicios que suelen ir en gris */
+    .layout-wrapper.light .content-area .text-muted,
+    .layout-wrapper.light .content-area .id-column {
+        color: #64748b !important;
+    }
+
+    /* Bordes y Hovers para las tablas de Productos/Servicios */
+    .content-area table td {
+        border-bottom: 1px solid var(--border-color) !important;
+    }
+
+    .layout-wrapper.light tr:hover {
+        background-color: #f1f5f9 !important;
+    }
+
+    /* 5. TOPBAR */
+    .topbar {
+        height: 64px; background: var(--topbar-bg); padding: 0 24px;
+        display: flex; align-items: center; justify-content: space-between;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .breadcrumb-current { color: var(--text-primary) !important; font-weight: 600; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .topbar-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 8px; border-radius: 8px; display: flex; align-items: center; }
+    .topbar-avatar-mini { width: 32px; height: 32px; border-radius: 50%; background: #2563eb; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
+
+    .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+    .btn-logout { width: 100%; background: none; border: none; color: #f87171; display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; font-size: 0.9rem; }
+
+    .content-area { padding: 24px; }
+</style>
+
+@code {
+    bool temaOscuro = true;
+    string temaClase => temaOscuro ? "dark" : "light";
+
+    void ToggleTema() => temaOscuro = !temaOscuro;
+    void HandleCambioEstado() => InvokeAsync(StateHasChanged);
+
+    protected override void OnInitialized() 
+    { 
+        AuthService.OnCambioEstado += HandleCambioEstado; 
+    }
+
+    public void Dispose() 
+    { 
+        AuthService.OnCambioEstado -= HandleCambioEstado; 
+    }
+
+    void Logout() => AuthService.Logout();
+
+    string GetPaginaActual()
+    {
+        var uri = Nav.Uri.ToLower();
+        if (uri.Contains("sucursales")) return "Sucursales";
+        if (uri.Contains("empleados"))  return "Empleados";
+        if (uri.Contains("caja"))       return "Caja";
+        if (uri.Contains("servicios"))  return "Servicios";
+        if (uri.Contains("productos"))  return "Productos";
+        if (uri.Contains("usuarios"))   return "Usuarios";
+        return "Dashboard";
+    }
+}

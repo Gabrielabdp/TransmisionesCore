@@ -1,0 +1,133 @@
+@inherits LayoutComponentBase
+@using TransmisionesCaja.Auth
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+@{
+    var nombreMostrar = Auth.UsuarioActual?.NombreCompleto?.Trim() is { Length: > 0 } nc
+        ? nc
+        : Auth.UsuarioActual?.Nombre_usuario ?? "?";
+    var inicial = nombreMostrar.Length > 0 ? nombreMostrar[0].ToString().ToUpper() : "?";
+}
+
+<div class="layout-wrapper">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-area">
+                <span class="logo-icon">⚙️</span>
+                <div>
+                    <h2>Transmisiones MAG</h2>
+                    <span class="system-label">Sistema de Transmisiones</span>
+                </div>
+            </div>
+            <div class="user-card">
+                <div class="user-avatar">@inicial</div>
+                <div>
+                    <p class="user-name">@nombreMostrar</p>
+                    <span class="badge-rol badge-@(Auth.UsuarioActual?.Rol?.ToLower())">@Auth.UsuarioActual?.Rol</span>
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            @if (Auth.EsAdmin())
+            {
+                <p class="nav-section">⚡ Administración</p>
+                <a href="/empleados" class="nav-link @(Nav.Uri.Contains("empleados") ? "active" : "")">
+                    <span class="nav-icon">👤</span> Empleados
+                </a>
+                <a href="/sucursales" class="nav-link @(Nav.Uri.Contains("sucursales") ? "active" : "")">
+                    <span class="nav-icon">🏢</span> Sucursales
+                </a>
+                <a href="/usuarios" class="nav-link @(Nav.Uri.Contains("usuarios") ? "active" : "")">
+                    <span class="nav-icon">🔐</span> Usuarios
+                </a>
+            }
+
+            <p class="nav-section">🔧 Operaciones</p>
+            <a href="/servicios" class="nav-link @(Nav.Uri.Contains("servicios") ? "active" : "")">
+                <span class="nav-icon">🔧</span> Servicios
+            </a>
+            <a href="/productos" class="nav-link @(Nav.Uri.Contains("productos") ? "active" : "")">
+                <span class="nav-icon">📦</span> Productos
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="btn-logout" @onclick="Logout">
+                <span>🚪</span> Cerrar Sesión
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <div class="breadcrumb">@GetPaginaActual()</div>
+            <div class="topbar-right">
+                <span class="topbar-user">Hola, <strong>@nombreMostrar</strong></span>
+            </div>
+        </div>
+        <div class="content-area">
+            @Body
+        </div>
+    </main>
+</div>
+
+@code {
+   void Logout()
+{
+    Auth.Logout();
+}
+
+    string GetPaginaActual()
+    {
+        var uri = Nav.Uri.ToLower();
+        if (uri.Contains("empleados"))  return "👤 Empleados";
+        if (uri.Contains("sucursales")) return "🏢 Sucursales";
+        if (uri.Contains("servicios"))  return "🔧 Servicios";
+        if (uri.Contains("productos"))  return "📦 Productos";
+        if (uri.Contains("usuarios"))   return "🔐 Usuarios";
+        return "🏠 Inicio";
+    }
+}
+
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    .layout-wrapper { display: flex; min-height: 100vh; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f1f5f9; }
+
+    .sidebar { width: 260px; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0; display: flex; flex-direction: column; box-shadow: 4px 0 20px rgba(0,0,0,0.2); position: fixed; height: 100vh; z-index: 100; }
+
+    .sidebar-header { padding: 20px; border-bottom: 1px solid #334155; }
+    .logo-area { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .logo-icon { font-size: 28px; }
+    .logo-area h2 { font-size: 18px; color: #38bdf8; margin: 0; font-weight: 700; }
+    .system-label { font-size: 10px; color: #64748b; }
+
+    .user-card { display: flex; align-items: center; gap: 10px; background: #1e3a5f; border-radius: 10px; padding: 10px 12px; }
+    .user-avatar { width: 36px; height: 36px; background: #0ea5e9; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0; }
+    .user-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+    .badge-rol { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge-admin   { background: #1d4ed8; color: #bfdbfe; }
+    .badge-cajero  { background: #854d0e; color: #fef9c3; }
+    .badge-tecnico { background: #6b21a8; color: #f3e8ff; }
+
+    .sidebar-nav { padding: 12px 0; flex: 1; overflow-y: auto; }
+    .nav-section { font-size: 10px; color: #475569; padding: 16px 20px 6px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; }
+    .nav-link { display: flex; align-items: center; gap: 10px; padding: 11px 20px; color: #94a3b8; text-decoration: none; font-size: 14px; transition: all 0.2s; border-left: 3px solid transparent; }
+    .nav-link:hover { background: #1e3a5f; color: #e2e8f0; border-left-color: #38bdf8; }
+    .nav-link.active { background: #1e3a5f; color: #38bdf8; border-left-color: #38bdf8; font-weight: 600; }
+    .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid #334155; }
+    .btn-logout { width: 100%; background: transparent; color: #f87171; border: 1px solid #f87171; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+    .btn-logout:hover { background: #dc2626; color: white; border-color: #dc2626; }
+
+    .main-content { flex: 1; margin-left: 260px; display: flex; flex-direction: column; min-height: 100vh; }
+
+    .topbar { background: white; padding: 14px 28px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 50; }
+    .breadcrumb { font-size: 16px; font-weight: 600; color: #1e293b; }
+    .topbar-right { font-size: 13px; color: #64748b; }
+    .topbar-user strong { color: #0ea5e9; }
+
+    .content-area { padding: 28px; flex: 1; }
+</style>

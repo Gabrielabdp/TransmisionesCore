@@ -54,4 +54,22 @@ public class CatalogosController : ControllerBase
         var alertas = await _productoUseCases.ObtenerAlertasStockAsync();
         return Ok(alertas);
     }
+
+    [HttpGet("tipos-servicio")]
+    public async Task<IActionResult> GetTiposServicio()
+    => Ok(await _context.TiposServicios
+        .Select(t => new { t.Id_tipo_servicio, t.Descripcion })
+        .ToListAsync());
+
+    [HttpGet("categorias")]
+    public async Task<IActionResult> GetCategorias()
+    => Ok(await _context.CategoriasProductos
+        .Select(c => new { c.Id_categoria, c.Nombre_categoria })
+        .ToListAsync());
+
+    [HttpGet("tipos-transmision")]
+    public async Task<IActionResult> GetTiposTransmision()
+        => Ok(await _context.TiposTransmision
+            .Select(t => new { t.Id_tipo_trans, t.Descripcion })
+            .ToListAsync());
 }

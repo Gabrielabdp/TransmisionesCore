@@ -1,0 +1,326 @@
+@page "/productos"
+@using TransmisionesCaja.Services
+@using TransmisionesCaja.Auth
+@inject ApiService ApiService
+@inject AuthService Auth
+@rendermode InteractiveServer
+
+<style>
+    .page-title, .page-subtitle, .page-count, 
+    .form-label, .modal-title, .modal-subtitle,
+    th, td, .margin-label, .input-field {
+        color: #ffffff !important;
+    }
+    .td-mono { color: #cbd5e1 !important; font-family: monospace; }
+    .td-accent { color: #60a5fa !important; }
+    .search-input { color: #ffffff !important; background-color: #1e293b !important; border: 1px solid #334155 !important; }
+    .search-input::placeholder { color: #94a3b8 !important; }
+    table thead th { border-bottom: 2px solid #334155 !important; }
+    table tbody td { border-bottom: 1px solid #1e293b !important; }
+    .empty-state { color: #94a3b8 !important; padding: 20px; text-align: center; }
+    .alert-error { background: rgba(239,68,68,0.1); border: 1px solid #f87171; color: #f87171; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Productos <span class="page-count">· @productosFiltrados.Count</span></h1>
+        <p class="page-subtitle">Gestiona el inventario de transmisiones</p>
+    </div>
+    @if (Auth.EsAdmin())
+    {
+        <button class="btn-primary" @onclick="MostrarModalProducto">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo Producto
+        </button>
+    }
+</div>
+
+<div class="search-bar">
+    <span class="search-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:20px; color: #94a3b8;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+    </span>
+    <input class="search-input" type="text" placeholder="Buscar productos (descripción, marca)..."
+           value="@filtro" @oninput="OnFiltroChanged" />
+</div>
+
+<div class="filter-chips">
+    <button class="chip @(filtroStock ? "active-green" : "")" @onclick="() => { filtroStock = !filtroStock; Filtrar(); }">Con Stock</button>
+    @if (filtroStock || !string.IsNullOrEmpty(filtro))
+    {
+        <button class="chip clear" @onclick="LimpiarFiltros" style="color: #ef4444 !important;">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:12px;height:12px;display:inline;margin-right:4px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Limpiar
+        </button>
+    }
+</div>
+
+@if (cargando)
+{
+    <div class="loading" style="color: #ffffff;">Cargando productos...</div>
+}
+else
+{
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Marca</th>
+                    <th>Categoría</th>
+                    <th style="text-align:right;">Precio Unit.</th>
+                    <th style="text-align:right;">Costo</th>
+                    <th style="text-align:right;">Stock</th>
+                    <th style="text-align:center;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in productosFiltrados)
+                {
+                    var lowStock = p.Stock_actual > 0 && p.Stock_actual <= 5;
+                    var noStock  = p.Stock_actual == 0;
+                    <tr>
+                        <td class="td-mono">@p.Id_producto</td>
+                        <td style="font-weight:600;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#ffffff;">@p.Descripcion_producto</td>
+                        <td>@(p.Marca ?? "—")</td>
+                        <td>@p.NombreCategoria</td>
+                        <td class="td-accent" style="text-align:right;font-weight:600;">RD$ @p.Precio_unitario.ToString("N0")</td>
+                        <td class="td-mono" style="text-align:right;color:#94a3b8 !important;">RD$ @p.Costo_unitario.ToString("N0")</td>
+                        <td style="text-align:right;">
+                            @if (noStock)
+                            {
+                                <span class="badge" style="background:rgba(239,68,68,0.2);color:#f87171;">Agotado</span>
+                            }
+                            else if (lowStock)
+                            {
+                                <span class="badge" style="background:rgba(245,158,11,0.2);color:#fbbf24;">@p.Stock_actual (Bajo)</span>
+                            }
+                            else
+                            {
+                                <span style="font-weight:600;color:#ffffff;">@p.Stock_actual</span>
+                            }
+                        </td>
+                        <td style="text-align:center;">
+                            @if (p.Activo)
+                            {
+                                <span class="badge" style="background:rgba(34,197,94,0.2);color:#4ade80;">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge" style="background:rgba(239,68,68,0.2);color:#f87171;">Inactivo</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!productosFiltrados.Any())
+                {
+                    <tr><td colspan="8"><div class="empty-state">No se encontraron productos</div></td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal" @onclick:stopPropagation style="background-color:#111827;border:1px solid #374151;">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">@(editando ? "Editar Producto" : "Nuevo Producto")</h2>
+                    <p class="modal-subtitle">@(editando ? "Modifica los datos del producto" : "Agrega un nuevo producto")</p>
+                </div>
+                <button class="btn-close-modal" @onclick="CerrarModal" style="color:#ffffff;">×</button>
+            </div>
+            <div class="modal-body">
+
+                @if (!string.IsNullOrEmpty(mensajeError))
+                {
+                    <div class="alert-error">⚠️ @mensajeError</div>
+                }
+
+                <div class="form-grid">
+                    <!-- Descripción — ocupa 2 columnas -->
+                    <div class="form-group col-span-2">
+                        <label class="form-label">Descripción *</label>
+                        <input class="input-field" @bind="form.Descripcion" placeholder="Ej: Transmisión Honda CR-V" />
+                    </div>
+
+                    <!-- Marca -->
+                    <div class="form-group">
+                        <label class="form-label">Marca *</label>
+                        <input class="input-field" @bind="form.Marca" placeholder="Ej: Honda" />
+                    </div>
+
+                    <!-- Categoría -->
+                    <div class="form-group">
+                        <label class="form-label">Categoría *</label>
+                        <select class="input-field" @bind="form.IdCategoria">
+                            <option value="0">-- Seleccionar --</option>
+                            @foreach (var c in categorias)
+                            {
+                                <option value="@c.Id_categoria">@c.Nombre_categoria</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- ✅ Tipo Transmisión — faltaba -->
+                    <div class="form-group">
+                        <label class="form-label">Tipo Transmisión *</label>
+                        <select class="input-field" @bind="form.IdTipoTrans">
+                            <option value="0">-- Seleccionar --</option>
+                            @foreach (var t in tiposTransmision)
+                            {
+                                <option value="@t.Id_tipo_trans">@t.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- ✅ Precio Unitario — faltaba -->
+                    <div class="form-group">
+                        <label class="form-label">Precio Unitario *</label>
+                        <input class="input-field" type="number" min="0" step="0.01" @bind="form.PrecioUnitario" placeholder="0.00" />
+                    </div>
+
+                    <!-- ✅ Costo Unitario — faltaba -->
+                    <div class="form-group">
+                        <label class="form-label">Costo Unitario *</label>
+                        <input class="input-field" type="number" min="0" step="0.01" @bind="form.CostoUnitario" placeholder="0.00" />
+                    </div>
+
+                    <!-- ✅ Stock Inicial — faltaba -->
+                    @if (!editando)
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Stock Inicial</label>
+                            <input class="input-field" type="number" min="0" @bind="form.StockInicial" placeholder="0" />
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer" style="margin-top:24px;">
+                    <button class="btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    <button class="btn-primary" @onclick="GuardarProducto" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "💾 Confirmar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<ProductoDto>  productos         = new();
+    List<ProductoDto>  productosFiltrados = new();
+    List<CategoriaDto> categorias        = new();
+    List<TipoTransDto> tiposTransmision  = new();
+
+    bool   cargando     = true;
+    bool   mostrarModal = false;
+    bool   editando     = false;
+    bool   guardando    = false;
+    string filtro       = string.Empty;
+    bool   filtroStock  = false;
+    string mensajeError = string.Empty;
+
+    ProductoForm form   = new();
+    int          editId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            productos        = await ApiService.GetProductosAsync();
+            categorias       = await ApiService.GetCategoriasAsync();
+            tiposTransmision = await ApiService.GetTiposTransmisionAsync();
+            Console.WriteLine($"--> Categorias: {categorias.Count}");
+            Console.WriteLine($"--> TiposTransmision: {tiposTransmision.Count}");
+            Filtrar();
+        }
+        catch (Exception ex) { Console.WriteLine($"--> ERROR Productos: {ex.Message}"); }
+        cargando = false;
+    }
+
+    void OnFiltroChanged(ChangeEventArgs e) { filtro = e.Value?.ToString() ?? ""; Filtrar(); }
+    void LimpiarFiltros() { filtro = string.Empty; filtroStock = false; Filtrar(); }
+
+    void Filtrar()
+    {
+        productosFiltrados = productos.Where(p =>
+            (string.IsNullOrWhiteSpace(filtro) ||
+             p.Descripcion_producto.Contains(filtro, StringComparison.OrdinalIgnoreCase) ||
+             (p.Marca ?? "").Contains(filtro, StringComparison.OrdinalIgnoreCase)) &&
+            (!filtroStock || p.Stock_actual > 0)
+        ).ToList();
+    }
+
+    void MostrarModalProducto()
+    {
+        editando    = false;
+        form        = new();
+        mensajeError = string.Empty;
+        mostrarModal = true;
+    }
+
+    void CerrarModal() => mostrarModal = false;
+
+    async Task GuardarProducto()
+    {
+        mensajeError = string.Empty;
+
+        // ✅ Validaciones
+        if (string.IsNullOrWhiteSpace(form.Descripcion))
+        { mensajeError = "La descripción es obligatoria."; return; }
+
+        if (!editando && (form.IdCategoria == 0 || form.IdTipoTrans == 0))
+        { mensajeError = "Debes seleccionar Categoría y Tipo de Transmisión."; return; }
+
+        if (!editando && form.PrecioUnitario <= 0)
+        { mensajeError = "El precio debe ser mayor a 0."; return; }
+
+        guardando = true;
+
+        bool ok = editando
+            ? await ApiService.ActualizarPrecioProductoAsync(editId, form.PrecioUnitario, form.CostoUnitario)
+            : await ApiService.CrearProductoAsync(new
+            {
+                IdCategoria    = form.IdCategoria,
+                IdTipoTrans    = form.IdTipoTrans,
+                Descripcion    = form.Descripcion,
+                Marca          = form.Marca,
+                PrecioUnitario = form.PrecioUnitario,
+                CostoUnitario  = form.CostoUnitario,
+                StockInicial   = form.StockInicial
+            });
+
+        if (ok)
+        {
+            productos = await ApiService.GetProductosAsync();
+            Filtrar();
+            CerrarModal();
+        }
+        else
+        {
+            mensajeError = "Error al guardar. Verifica los datos e intenta de nuevo.";
+        }
+
+        guardando = false;
+    }
+
+    class ProductoForm
+    {
+        public string   Descripcion    { get; set; } = string.Empty;
+        public string?  Marca          { get; set; }
+        public int      IdCategoria    { get; set; }
+        public int      IdTipoTrans    { get; set; }
+        public decimal  PrecioUnitario { get; set; }
+        public decimal  CostoUnitario  { get; set; }
+        public int      StockInicial   { get; set; }
+    }
+}

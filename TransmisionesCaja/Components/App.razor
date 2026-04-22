@@ -1,0 +1,34 @@
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Components.Pages
+@inject AuthService Auth
+@implements IDisposable
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transmisiones MAG</title>
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="TransmisionesCaja.styles.css" />
+</head>
+<body>
+    <Routes/>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>
+
+@code {
+    void HandleCambioEstado() => InvokeAsync(StateHasChanged);
+
+    protected override void OnInitialized()
+    {
+        Auth.OnCambioEstado += HandleCambioEstado;
+    }
+
+    public void Dispose()
+    {
+        Auth.OnCambioEstado -= HandleCambioEstado;
+    }
+}

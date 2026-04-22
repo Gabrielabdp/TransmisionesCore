@@ -1,0 +1,272 @@
+@page "/caja"
+@rendermode InteractiveServer
+@using TransmisionesCaja.Services
+@using TransmisionesCaja.Auth
+@inject ApiService Api
+@inject AuthService Auth
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Caja <span class="page-status @(cajaAbierta ? "status-open" : "status-closed")">· @(cajaAbierta ? "Abierta" : "Cerrada")</span></h1>
+        <p class="page-subtitle">Registro básico de ventas · <strong>Vendedor:</strong> @Auth.UsuarioActual?.NombreCompleto · <strong>Sucursal:</strong> @(Auth.UsuarioActual?.Rol == "Admin" ? "Sede Central" : "Sucursal")</p>
+    </div>
+    
+    @if (!cajaAbierta)
+    {
+        <button class="btn-primary btn-open-caja" @onclick="AbrirCaja">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            Abrir Caja del Día
+        </button>
+    }
+    else
+    {
+        <button class="btn-danger-outline" @onclick="CerrarCaja">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            Cerrar Caja
+        </button>
+    }
+</div>
+
+@if (cajaAbierta)
+{
+    <div class="caja-grid">
+        <!-- Panel de Registro -->
+        <div class="dash-card">
+            <div class="dash-card-header">
+                <h3>🛒 Registrar Venta / Servicio</h3>
+            </div>
+            <div class="dash-card-body">
+                <div class="form-container">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Ítem</label>
+                        <div class="type-selector">
+                            <button class="type-btn @(tipoSeleccionado == "Producto" ? "active" : "")" @onclick='() => SetTipo("Producto")'>📦 Producto</button>
+                            <button class="type-btn @(tipoSeleccionado == "Servicio" ? "active" : "")" @onclick='() => SetTipo("Servicio")'>🔧 Servicio</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Seleccionar @tipoSeleccionado</label>
+                        <select class="input-field" @onchange="OnItemSeleccionado">
+                            <option value="0">-- Seleccione un item --</option>
+                            @if (tipoSeleccionado == "Producto")
+                            {
+                                @foreach (var p in productos)
+                                {
+                                    <option value="@p.Id_producto">@p.Descripcion_producto (Stock: @p.Stock_actual)</option>
+                                }
+                            }
+                            else
+                            {
+                                @foreach (var s in servicios)
+                                {
+                                    <option value="@s.Id_servicio">@s.Nombre_servicio</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label class="form-label">Cantidad</label>
+                            <input type="number" class="input-field" @bind="cantidad" min="1" />
+                        </div>
+                        <div class="form-group flex-2">
+                            <label class="form-label">Precio Unitario (RD$)</label>
+                            <input type="number" class="input-field" @bind="precio" step="0.01" readonly />
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary w-100 mt-4" @onclick="AgregarVenta" disabled="@(idSeleccionado == 0)">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                        Registrar Transacción
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Resumen -->
+        <div class="dash-card">
+            <div class="dash-card-header">
+                <h3>📋 Ventas de la Sesión</h3>
+                <span class="fecha-apertura">Sesión iniciada: @fechaApertura</span>
+            </div>
+            <div class="dash-card-body p-0">
+                <div class="table-container">
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Ítem</th>
+                                <th class="text-center">Tipo</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!ventas.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center py-5 text-muted">No hay ventas registradas en esta sesión</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var venta in ventas)
+                                {
+                                    <tr>
+                                        <td>@venta.Producto</td>
+                                        <td class="text-center"><span class="badge-tipo">@venta.Tipo</span></td>
+                                        <td class="text-center">@venta.Cantidad</td>
+                                        <td class="text-end font-bold">@((venta.Cantidad * venta.Precio).ToString("C2"))</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="total-section">
+                    <div class="total-row grand-total">
+                        <span>TOTAL DEL DÍA</span>
+                        <span>@totalGeneral.ToString("C2")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="empty-state-container">
+        <div class="empty-state-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <h2>Caja lista para iniciar</h2>
+        <p>Selecciona "Abrir Caja" para comenzar a registrar movimientos de hoy.</p>
+        <button class="btn-primary btn-lg mt-4" @onclick="AbrirCaja">
+            🚀 Iniciar Sesión de Caja
+        </button>
+    </div>
+}
+
+@code {
+    private bool cajaAbierta = false;
+    private string fechaApertura = "";
+    private string tipoSeleccionado = "Producto";
+    private int idSeleccionado = 0;
+    private int cantidad = 1;
+    private decimal precio = 0;
+    private string nombreItem = "";
+
+    private List<ProductoDto> productos = new();
+    private List<ServicioDto> servicios = new();
+    private List<VentaItem> ventas = new();
+    private decimal totalGeneral => ventas.Sum(v => v.Cantidad * v.Precio);
+
+    protected override async Task OnInitializedAsync()
+    {
+        productos = await Api.GetProductosAsync();
+        servicios = await Api.GetServiciosAsync();
+    }
+
+    private void SetTipo(string tipo) 
+    { 
+        tipoSeleccionado = tipo; 
+        idSeleccionado = 0; 
+        precio = 0; 
+    }
+
+    private void OnItemSeleccionado(ChangeEventArgs e)
+    {
+        idSeleccionado = int.Parse(e.Value?.ToString() ?? "0");
+        if (idSeleccionado == 0) return;
+
+        if (tipoSeleccionado == "Producto")
+        {
+            var p = productos.FirstOrDefault(x => x.Id_producto == idSeleccionado);
+            if (p != null) { precio = p.Precio_unitario; nombreItem = p.Descripcion_producto; }
+        }
+        else
+        {
+            var s = servicios.FirstOrDefault(x => x.Id_servicio == idSeleccionado);
+            if (s != null) { precio = s.Precio_base; nombreItem = s.Nombre_servicio; }
+        }
+    }
+
+    private void AbrirCaja() { cajaAbierta = true; fechaApertura = DateTime.Now.ToString("HH:mm"); ventas.Clear(); }
+    private void CerrarCaja() => cajaAbierta = false;
+
+    private void AgregarVenta()
+    {
+        if (idSeleccionado == 0 || cantidad <= 0) return;
+        ventas.Add(new VentaItem { Producto = nombreItem, Cantidad = cantidad, Precio = precio, Tipo = tipoSeleccionado });
+        idSeleccionado = 0; cantidad = 1; precio = 0;
+    }
+
+    private class VentaItem { public string Producto { get; set; } = ""; public int Cantidad { get; set; } public decimal Precio { get; set; } public string Tipo { get; set; } = ""; }
+}
+
+<style>
+    /* Estilos de la página */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 1.8rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .page-status { font-size: 1rem; font-weight: 400; }
+    .status-open { color: #22c55e; }
+    .status-closed { color: #ef4444; }
+    .page-subtitle { color: var(--text-muted); font-size: 0.9rem; margin: 4px 0 0; }
+
+    /* Selectores de Tipo */
+    .type-selector { display: flex; gap: 8px; margin-top: 4px; }
+    .type-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-muted); cursor: pointer; transition: all 0.2s; font-size: 0.85rem; }
+    .type-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; font-weight: 600; }
+
+    /* Botones */
+    .btn-primary { background: #3b82f6; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s; }
+    .btn-primary:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-danger-outline { background: transparent; color: #f87171; border: 1px solid #f87171; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-danger-outline:hover { background: #ef4444; color: white; }
+    .w-100 { width: 100%; }
+
+    /* Grid Layout */
+    .caja-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; }
+
+    /* Cards */
+    .dash-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; height: fit-content; }
+    .dash-card-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .dash-card-header h3 { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .fecha-apertura { font-size: 0.75rem; color: var(--text-muted); }
+    .dash-card-body { padding: 24px; }
+    .p-0 { padding: 0; }
+
+    /* Formulario */
+    .form-container { display: flex; flex-direction: column; gap: 16px; }
+    .form-row { display: flex; gap: 12px; }
+    .flex-1 { flex: 1; }
+    .flex-2 { flex: 2; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .input-field { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; color: var(--text-primary); font-size: 0.95rem; outline: none; box-sizing: border-box; }
+    .input-field:focus { border-color: #3b82f6; }
+
+    /* Tabla */
+    .table-container { min-height: 200px; }
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .dash-table th { padding: 12px 20px; background: rgba(0,0,0,0.05); color: var(--text-muted); font-weight: 600; text-align: left; font-size: 0.75rem; text-transform: uppercase; }
+    .dash-table td { padding: 12px 20px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); }
+    .badge-tipo { background: rgba(59,130,246,0.1); color: #3b82f6; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .text-end { text-align: right; }
+    .text-center { text-align: center; }
+    .font-bold { font-weight: 700; }
+
+    /* Totales */
+    .total-section { padding: 20px; background: rgba(0,0,0,0.1); }
+    .grand-total { display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; color: #3b82f6; }
+
+    /* Empty State */
+    .empty-state-container { text-align: center; padding: 80px 20px; background: var(--bg-card); border: 2px dashed var(--border-color); border-radius: 24px; }
+    .empty-state-icon { color: var(--text-muted); opacity: 0.3; margin-bottom: 24px; }
+    .empty-state-icon svg { width: 80px; height: 80px; }
+    .empty-state-container h2 { color: var(--text-primary); margin-bottom: 12px; }
+    .empty-state-container p { color: var(--text-muted); max-width: 400px; margin: 0 auto; }
+</style>

@@ -1,0 +1,232 @@
+@page "/usuarios"
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Services
+@inject ApiService Api
+@inject AuthService Auth
+@rendermode InteractiveServer
+
+@if (!Auth.EsAdmin())
+{
+    <div class="acceso-denegado-container">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <p>Solo los administradores pueden acceder a esta sección.</p>
+    </div>
+    return;
+}
+
+<style>
+    /* RESET DE COLORES PARA MODO OSCURO (ESTILO EMPLEADOS) */
+    .page-title { color: #ffffff !important; font-weight: 700; }
+    .page-subtitle { color: #94a3b8 !important; }
+    .page-count { color: #60a5fa !important; font-weight: 600; }
+
+    /* CONTENEDOR DE TABLA */
+    .table-wrapper { 
+        background: #111827; 
+        border-radius: 12px; 
+        border: 1px solid #1f2937; 
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .custom-table { width: 100%; border-collapse: collapse; }
+    
+    .custom-table th {
+        background: #1f2937;
+        color: #94a3b8;
+        font-size: 11px;
+        text-transform: uppercase;
+        padding: 14px 16px;
+        text-align: left;
+        letter-spacing: 0.05em;
+    }
+
+    .custom-table td { 
+        padding: 16px; 
+        border-bottom: 1px solid #1f2937; 
+        color: #e5e7eb; 
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    /* PERFIL Y AVATAR */
+    .user-profile-cell { display: flex; align-items: center; gap: 12px; }
+    
+    .user-avatar {
+        width: 38px; height: 38px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 12px;
+        background: #ffffff; color: #111827; /* Fondo blanco como en tu captura */
+    }
+
+    .user-name { font-weight: 700; color: #ffffff !important; display: block; }
+    .user-meta { font-size: 12px; color: #64748b; }
+
+    /* BADGES (ROLES) */
+    .badge-role {
+        padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .badge-indigo { background: rgba(79, 70, 229, 0.2); color: #818cf8; border: 1px solid rgba(79, 70, 229, 0.3); }
+    .badge-amber { background: rgba(217, 119, 6, 0.2); color: #fbbf24; border: 1px solid rgba(217, 119, 6, 0.3); }
+    .badge-purple { background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.3); }
+
+    /* ESTADO (DOTS) */
+    .status-indicator {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 12px; font-weight: 600;
+        padding: 4px 10px; border-radius: 20px;
+    }
+    .is-active { background: rgba(16, 185, 129, 0.1); color: #34d399; }
+    .is-inactive { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .is-active .dot { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .is-inactive .dot { background: #ef4444; }
+
+    /* BOTONES */
+    .btn-primary {
+        background: #0ea5e9; color: white; border: none; padding: 10px 20px; 
+        border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
+    }
+    .btn-action-v2 {
+        background: transparent; border: none; color: #64748b; padding: 8px; border-radius: 6px; cursor: pointer;
+    }
+    .btn-action-v2:hover { background: #1f2937; color: #ffffff; }
+    .btn-action-v2.danger:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+</style>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Usuarios <span class="page-count">· @usuarios.Count</span></h1>
+        <p class="page-subtitle">Gestiona las cuentas de acceso y roles del sistema</p>
+    </div>
+    <button class="btn-primary" @onclick="AbrirNuevo">
+        <svg style="width:20px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        Nuevo Usuario
+    </button>
+</div>
+
+@if (cargando)
+{
+    <div style="color: #94a3b8; text-align: center; padding: 40px;">Cargando usuarios...</div>
+}
+else
+{
+    <div class="table-wrapper">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th style="text-align:right;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in usuarios)
+                {
+                    <tr>
+                        <td style="font-family: monospace; color: #64748b;">#@u.Id_usuario.ToString("D2")</td>
+                        <td>
+                            <div class="user-profile-cell">
+                                <div class="user-avatar">
+                                    @u.Nombre_usuario.Substring(0, Math.Min(2, u.Nombre_usuario.Length)).ToUpper()
+                                </div>
+                                <div class="user-details">
+                                    <span class="user-name">@u.Nombre_usuario</span>
+                                    <span class="user-meta">@u.Nombre_usuario@@sistema</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge-role @GetRolBadge(u.Rol)">
+                                @u.Rol
+                            </span>
+                        </td>
+                        <td>
+                            <div class="status-indicator @(u.Activo ? "is-active" : "is-inactive")">
+                                <span class="dot"></span>
+                                @(u.Activo ? "Activo" : "Inactivo")
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                                <button class="btn-action-v2" @onclick="() => AbrirEditar(u)">
+                                    <svg style="width:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                </button>
+                                @if (u.Activo)
+                                {
+                                    <button class="btn-action-v2 danger" @onclick="() => ConfirmarDesactivar(u)">
+                                        <svg style="width:18px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    // TODA LA LÓGICA PERMANECE IGUAL
+    List<UsuarioDto> usuarios = new();
+    bool cargando = true; bool mostrarModal = false; bool mostrarConfirm = false;
+    bool esNuevo = true; bool guardando = false;
+    int editId = 0;
+    string mensajeError = string.Empty; string mensajeExito = string.Empty;
+    UsuarioForm form = new();
+    UsuarioDto? usuarioADesactivar = null;
+
+    protected override async Task OnInitializedAsync() => await CargarDatos();
+
+    async Task CargarDatos()
+    {
+        cargando = true;
+        try { usuarios = await Api.GetUsuariosAsync(); }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        cargando = false;
+    }
+
+    void AbrirNuevo() { esNuevo = true; form = new(); mostrarModal = true; }
+    void AbrirEditar(UsuarioDto u)
+    {
+        esNuevo = false;
+        editId = u.Id_usuario;
+        form = new() { NombreUsuario = u.Nombre_usuario, Rol = u.Rol, Activo = u.Activo };
+        mostrarModal = true;
+    }
+    void CerrarModal() => mostrarModal = false;
+    void ConfirmarDesactivar(UsuarioDto u) { usuarioADesactivar = u; mostrarConfirm = true; }
+
+    async Task EjecutarDesactivar()
+    {
+        if (usuarioADesactivar == null) return;
+        var ok = await Api.EliminarUsuarioAsync(usuarioADesactivar.Id_usuario);
+        if (ok) await CargarDatos();
+        mostrarConfirm = false;
+    }
+
+    async Task Reactivar(UsuarioDto u)
+    {
+        var ok = await Api.ActualizarUsuarioAsync(u.Id_usuario, new { Nombre_usuario = u.Nombre_usuario, Rol = u.Rol, Activo = true });
+        if (ok) await CargarDatos();
+    }
+
+    async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(form.NombreUsuario)) return;
+        guardando = true;
+        bool ok = esNuevo
+            ? await Api.CrearUsuarioAsync(new { Nombre_usuario = form.NombreUsuario, Contrasena = form.Contrasena!, Rol = form.Rol })
+            : await Api.ActualizarUsuarioAsync(editId, new { Nombre_usuario = form.NombreUsuario, Rol = form.Rol, Activo = form.Activo, Contrasena = form.Contrasena });
+        
+        if (ok) { await CargarDatos(); CerrarModal(); }
+        guardando = false;
+    }
+
+    string GetRolBadge(string rol) => rol?.ToLower() switch { "admin" => "badge-indigo", "cajero" => "badge-amber", "tecnico" => "badge-purple", _ => "badge-indigo" };
+
+    class UsuarioForm { public string NombreUsuario { get; set; } = string.Empty; public string Rol { get; set; } = "Cajero"; public string? Contrasena { get; set; } public bool Activo { get; set; } = true; }
+}

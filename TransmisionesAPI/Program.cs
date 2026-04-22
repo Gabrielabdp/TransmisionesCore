@@ -66,7 +66,6 @@ builder.Services.AddScoped<AuditoriaUseCases>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -74,7 +73,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+
+
+app.UseHttpsRedirection(); 
 app.UseAuthorization();
+
 app.MapControllers();
 
 // Test Endpoint

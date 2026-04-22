@@ -20,7 +20,11 @@ public class ProductoRepository : IProductoRepository
 
     public async Task<IEnumerable<Producto>> ObtenerTodosAsync(int? idCategoria = null, bool soloConStock = false)
     {
-        var query = _context.Productos.AsQueryable();
+        var query = _context.Productos
+            .Include(p => p.Categoria)        // ✅ agregar
+            .Include(p => p.TipoTransmision)  // ✅ agregar
+            .AsQueryable();
+
         if (idCategoria.HasValue) query = query.Where(p => p.Id_categoria == idCategoria);
         if (soloConStock) query = query.Where(p => p.Stock_actual > 0);
         return await query.ToListAsync();
@@ -94,4 +98,6 @@ public class ProductoRepository : IProductoRepository
             .FromSqlRaw("EXEC sp_ReporteInventarioBajo @Stock_minimo", parametro)
             .ToListAsync();
     }
+
+
 }

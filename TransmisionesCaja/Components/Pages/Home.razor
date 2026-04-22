@@ -1,0 +1,487 @@
+﻿@page "/"
+@page "/home"
+@rendermode InteractiveServer
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Services
+@inject AuthService Auth
+@inject ApiService Api
+@inject NavigationManager Nav
+
+@if (!Auth.EstaAutenticado)
+{
+    <div>Cargando...</div>
+    return;
+}
+
+<div class="dashboard-wrapper">
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(14,165,233,0.15);">
+                <svg fill="none" stroke="#0ea5e9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+            </div>
+            <div class="kpi-info">
+                <span class="kpi-label">Sucursales Activas</span>
+                @if (cargando)
+                {
+                    <span class="kpi-value">...</span>
+                }
+                else
+                {
+
+                    <span class="kpi-value">@sucursalesActivas</span>
+                }
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(99,102,241,0.15);">
+                <svg fill="none" stroke="#6366f1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <div class="kpi-info">
+                <span class="kpi-label">Empleados</span>
+                @if (cargando)
+                {
+                    <span class="kpi-value">...</span>
+                }
+                else
+                {
+
+                    <span class="kpi-value">@totalEmpleados</span>
+                }
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(34,197,94,0.15);">
+                <svg fill="none" stroke="#22c55e" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            </div>
+            <div class="kpi-info">
+                <span class="kpi-label">Productos en Stock</span>
+                @if (cargando)
+                {
+                    <span class="kpi-value">...</span>
+                }
+                else
+                {
+
+                    <span class="kpi-value">@productosConStock</span>
+                }
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon" style="background: rgba(245,158,11,0.15);">
+                <svg fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <div class="kpi-info">
+                <span class="kpi-label">Stock Bajo / Agotado</span>
+                @if (cargando)
+                {
+                    <span class="kpi-value">...</span>
+                }
+                else
+                {
+
+                    <span class="kpi-value" style="color: @(stockBajo > 0 ? "#f59e0b" : "#22c55e")">@stockBajo</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- FILA 2 -->
+    <div class="dashboard-row">
+
+        <!-- ACTIVIDAD RECIENTE -->
+        <div class="dash-card flex-2">
+            <div class="dash-card-header">
+                <h3>👥 Empleados Recientes</h3>
+                <a href="/empleados" class="dash-link">Ver todos →</a>
+            </div>
+            <div class="dash-card-body">
+                @if (cargando)
+                {
+                    <div class="dash-loading">Cargando...</div>
+                }
+                else if (!empleadosRecientes.Any())
+                {
+                    <div class="dash-empty">No hay empleados registrados</div>
+                }
+                else
+                {
+                    <table class="dash-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Sucursal</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in empleadosRecientes)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="emp-row">
+                                            <div class="emp-avatar">@emp.NombreCompleto.FirstOrDefault().ToString().ToUpper()</div>
+                                            <span>@emp.NombreCompleto</span>
+                                        </div>
+                                    </td>
+                                    <td>@emp.NombreSucursal</td>
+                                    <td><span class="badge-rol badge-@emp.Rol.ToLower()">@emp.Rol</span></td>
+                                    <td>
+                                        @if (emp.Activo)
+                                        {
+                                            <span class="badge-activo">● Activo</span>
+                                        }
+                                        else
+                                        {
+
+                                            <span class="badge-inactivo">● Inactivo</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        <!-- ESTADO DEL SISTEMA -->
+        <div class="dash-card flex-1">
+            <div class="dash-card-header">
+                <h3>⚡ Estado del Sistema</h3>
+            </div>
+            <div class="dash-card-body">
+                <div class="status-row">
+                    <span class="status-label">API</span>
+                    <div class="status-badge online"><span class="status-dot-mini"></span> Online</div>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Base de Datos</span>
+                    <div class="status-badge @(cargando ? "syncing" : "online")">
+                        <span class="status-dot-mini"></span> @(cargando ? "Conectando" : "Online")
+                    </div>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Empleados Activos</span>
+                    <div class="status-badge online"><span class="status-dot-mini"></span> @empleadosActivos</div>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Sucursales</span>
+                    <div class="status-badge online"><span class="status-dot-mini"></span> @sucursalesActivas</div>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Servicios</span>
+                    <div class="status-badge online"><span class="status-dot-mini"></span> @totalServicios</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILA 3 — Servicios Expandido -->
+    <div class="dashboard-row">
+        <div class="dash-card flex-1">
+            <div class="dash-card-header">
+                <h3>🔧 Catálogo de Servicios Disponibles</h3>
+                <a href="/servicios" class="dash-link">Ver todos los servicios →</a>
+            </div>
+            <div class="dash-card-body">
+                @if (cargando)
+                {
+                    <div class="dash-loading">Cargando servicios...</div>
+                }
+                else if (!servicios.Any())
+                {
+                    <div class="dash-empty">No hay servicios registrados</div>
+                }
+                else
+                {
+                    <div class="servicios-grid-dashboard">
+                        @foreach (var s in servicios.Take(8))
+                        {
+                            <div class="servicio-row">
+                                <div class="serv-main-info">
+                                    <p class="serv-nombre">@s.Nombre_servicio</p>
+                                    <p class="serv-tipo">@s.TipoServicio</p>
+                                </div>
+                                <div class="serv-price-info">
+                                    <span class="serv-precio">RD$ @s.Precio_base.ToString("N0")</span>
+                                    <span class="badge-activo">● Activo</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    bool cargando = true;
+
+    // Datos
+    List<EmpleadoDto> empleados = new();
+    List<EmpleadoDto> empleadosRecientes = new();
+    List<ProductoDto> productos = new();
+    List<ProductoDto> productosAlerta = new();
+    List<ServicioDto> servicios = new();
+
+    // KPIs
+    int sucursalesActivas = 0;
+    int totalEmpleados = 0;
+    int empleadosActivos = 0;
+    int productosConStock = 0;
+    int productosAgotados = 0;
+    int stockBajo = 0;
+    int totalProductos = 0;
+    int totalServicios = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Auth.EstaAutenticado)
+        {
+            Nav.NavigateTo("/login");
+            return;
+        }
+
+        try
+        {
+            var tareaEmpleados = Api.GetEmpleadosAsync();
+            var tareaProductos = Api.GetProductosAsync();
+            var tareaServicios = Api.GetServiciosAsync();
+
+            await Task.WhenAll(tareaEmpleados, tareaProductos, tareaServicios);
+
+            empleados = await tareaEmpleados;
+            productos = await tareaProductos;
+            servicios = await tareaServicios;
+
+            // KPIs empleados
+            totalEmpleados = empleados.Count;
+            empleadosActivos = empleados.Count(e => e.Activo);
+            empleadosRecientes = empleados.Take(5).ToList();
+
+            // KPIs sucursales (únicas)
+            sucursalesActivas = empleados
+                .Where(e => e.Sucursal != null)
+                .Select(e => e.Id_sucursal)
+                .Distinct()
+                .Count();
+
+            // KPIs productos
+            totalProductos = productos.Count;
+            productosConStock = productos.Count(p => p.Stock_actual > 0);
+            productosAgotados = productos.Count(p => p.Stock_actual == 0);
+            stockBajo = productos.Count(p => p.Stock_actual > 0 && p.Stock_actual <= 5);
+            productosAlerta = productos.Where(p => p.Stock_actual <= 5).OrderBy(p => p.Stock_actual).ToList();
+
+            // Servicios
+            totalServicios = servicios.Count;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"--> ERROR Dashboard: {ex.Message}");
+        }
+
+        cargando = false;
+    }
+}
+
+<style>
+    .dashboard-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 24px 32px;
+        background-color: #0f172a;
+        flex: 1; 
+        width: 100%;
+        min-height: 100vh;
+        box-sizing: border-box;
+    }
+
+    /* KPI GRID */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+    .kpi-card {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        min-height: 110px;
+        transition: all 0.2s ease;
+    }
+    .kpi-card:hover { transform: translateY(-2px); }
+    .kpi-icon {
+        width: 52px; height: 52px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .kpi-icon svg { width: 26px; height: 26px; }
+    .kpi-info { display: flex; flex-direction: column; gap: 4px; }
+    .kpi-label { font-size: 12px; color: #64748b; font-weight: 500; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: #f1f5f9; line-height: 1; }
+
+    /* FILAS */
+    .dashboard-row {
+        display: flex;
+        gap: 16px;
+        align-items: stretch;
+    }
+    .flex-1 { flex: 1; display: flex; flex-direction: column; }
+    .flex-2 { flex: 2; display: flex; flex-direction: column; }
+    .dash-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; flex: 1; }
+    .dash-card-body { padding: 16px 20px; flex: 1; }
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid #334155;
+    }
+    .dash-card-header h3 {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin: 0;
+    }
+    .dash-link {
+        font-size: 12px;
+        color: #38bdf8;
+        text-decoration: none;
+    }
+    .dash-link:hover { text-decoration: underline; }
+    .dash-card-body { padding: 16px 20px; }
+    .dash-loading { color: #64748b; font-size: 13px; text-align: center; padding: 20px; }
+    .dash-empty { color: #64748b; font-size: 13px; text-align: center; padding: 20px; }
+
+    /* TABLA EMPLEADOS */
+    .dash-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .dash-table th { color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; padding: 8px 0; border-bottom: 1px solid #334155; }
+    .dash-table td { padding: 10px 0; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+    .dash-table tr:last-child td { border-bottom: none; }
+    .emp-row { display: flex; align-items: center; gap: 10px; }
+    .emp-avatar {
+        width: 30px; height: 30px;
+        background: #0ea5e9;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+    }
+    .badge-rol { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge-admin   { background: #1d4ed8; color: #bfdbfe; }
+    .badge-cajero  { background: #854d0e; color: #fef9c3; }
+    .badge-tecnico { background: #6b21a8; color: #f3e8ff; }
+    .badge-activo   { color: #4ade80; font-size: 12px; }
+    .badge-inactivo { color: #f87171; font-size: 12px; }
+
+    /* ESTADO SISTEMA */
+    .status-row {
+        display: flex;
+        justify-content: flex-start; 
+        align-items: center;
+        gap: 12px; 
+        padding: 16px 0; 
+        border-bottom: 1px solid #334155;
+    }
+    .status-row:last-of-type { border-bottom: none; }
+    .status-label { 
+        color: #94a3b8; 
+        width: 170px; /* Aumentado de 130px para crear más espacio en el medio */
+        font-size: 13px;
+        font-weight: 500;
+    } 
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 10px; /* Espacio extra de seguridad */
+    }
+    .status-badge.online { background: rgba(34, 197, 94, 0.1); color: #4ade80; }
+    .status-badge.syncing { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .status-badge.offline { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+    .status-dot-mini { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* ACCESOS RÁPIDOS */
+    .quick-btn {
+        display: block;
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        padding: 9px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    .quick-btn:hover { background: #1e3a5f; border-color: #38bdf8; color: #38bdf8; }
+
+    /* INVENTARIO */
+    .inv-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .inv-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        background: #0f172a;
+        border-radius: 8px;
+        padding: 12px 8px;
+    }
+    .inv-num { font-size: 22px; font-weight: 700; }
+    .inv-label { font-size: 10px; color: #64748b; text-align: center; }
+    .alerta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 7px 0;
+        border-bottom: 1px solid #334155;
+        font-size: 12px;
+        color: #cbd5e1;
+    }
+    .alerta-row:last-child { border-bottom: none; }
+    .alerta-stock { font-weight: 600; font-size: 11px; padding: 2px 8px; border-radius: 6px; }
+    .alerta-stock.agotado { background: rgba(239,68,68,0.2); color: #f87171; }
+    .alerta-stock.bajo    { background: rgba(245,158,11,0.2); color: #fbbf24; }
+
+    /* SERVICIOS */
+    .servicio-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #334155;
+    }
+    .servicio-row:last-child { border-bottom: none; }
+    .serv-nombre { font-size: 13px; color: #e2e8f0; font-weight: 500; margin: 0; }
+    .serv-tipo   { font-size: 11px; color: #64748b; margin: 2px 0 0; }
+    .serv-precio { font-size: 13px; color: #38bdf8; font-weight: 600; white-space: nowrap; }
+
+    @@media (max-width: 1024px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+        .dashboard-row { flex-direction: column; }
+        .inv-stats { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>

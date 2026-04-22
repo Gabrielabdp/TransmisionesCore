@@ -1,0 +1,211 @@
+@page "/servicios"
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Services
+@inject ApiService Api
+@inject AuthService Auth
+@rendermode InteractiveServer
+
+<div class="page-header">
+    <div>
+        <h2>🔧 Servicios</h2>
+        <p>Catálogo de servicios ofrecidos</p>
+    </div>
+    @if (Auth.EsAdmin())
+    {
+        <button class="btn-primary" @onclick="AbrirNuevo">+ Nuevo Servicio</button>
+    }
+</div>
+
+@if (cargando)
+{
+    <div class="loading">Cargando servicios...</div>
+}
+else
+{
+    <div class="tabla-wrapper">
+        <table class="tabla">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Precio Base</th>
+                    <th>Estado</th>
+                    @if (Auth.EsAdmin()) { <th>Acciones</th> }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in servicios)
+                {
+                    <tr>
+                        <td>@s.Id_servicio</td>
+                        <td><strong>@s.Nombre_servicio</strong></td>
+                        <td>@s.TipoServicio</td>
+                        <td>@(s.Descripcion ?? "—")</td>
+                        <td><strong>RD$ @s.Precio_base.ToString("N2")</strong></td>
+                        <td>
+                            @if (s.Activo) { <span class="badge-activo">Activo</span> }
+                            else { <span class="badge-inactivo">Inactivo</span> }
+                        </td>
+                        @if (Auth.EsAdmin())
+                        {
+                            <td style="display:flex; gap:6px;">
+                                <button class="btn-edit" @onclick="() => AbrirEditar(s)">✏️ Editar</button>
+                                <button class="@(s.Activo ? "btn-desactivar" : "btn-activar")"
+                                        @onclick="() => CambiarEstado(s)">
+                                    @(s.Activo ? "🔴 Desactivar" : "🟢 Activar")
+                                </button>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3>@(esNuevo ? "Nuevo Servicio" : "Editar Servicio")</h3>
+                <button class="btn-close" @onclick="CerrarModal">✕</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(mensajeError))
+                { <div class="alert-error">⚠️ @mensajeError</div> }
+                @if (!string.IsNullOrEmpty(mensajeExito))
+                { <div class="alert-exito">✅ @mensajeExito</div> }
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nombre del Servicio *</label>
+                        <input @bind="form.NombreServicio" class="input-field" placeholder="Ej: Alineación computarizada" />
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Servicio *</label>
+                        <select @bind="form.IdTipoServicio" class="input-field">
+                            <option value="0">-- Seleccionar --</option>
+                            @foreach (var t in tiposServicio)
+                            {
+                                <option value="@t.Id_tipo_servicio">@t.Descripcion</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2">
+                        <label>Descripción</label>
+                        <input @bind="form.Descripcion" class="input-field" placeholder="Descripción del servicio" />
+                    </div>
+                    <div class="form-group">
+                        <label>Precio Base (RD$) *</label>
+                        <input type="number" @bind="form.PrecioBase" class="input-field" min="0" step="0.01" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                <button class="btn-primary" @onclick="Guardar" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "💾 Guardar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<ServicioDto>     servicios     = new();
+    List<TipoServicioDto> tiposServicio = new();
+    bool cargando = true; bool mostrarModal = false;
+    bool esNuevo = true;  bool guardando = false;
+    int editId = 0;
+    string mensajeError = string.Empty; string mensajeExito = string.Empty;
+    ServicioForm form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            servicios     = await Api.GetServiciosAsync();
+            tiposServicio = (await Api.GetCatalogosAsync()).TiposServicio;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        cargando = false;
+    }
+
+    void AbrirNuevo() { esNuevo = true; form = new(); mensajeError = mensajeExito = string.Empty; mostrarModal = true; }
+    void AbrirEditar(ServicioDto s)
+    {
+        esNuevo = false; editId = s.Id_servicio;
+        form = new() { NombreServicio = s.Nombre_servicio, Descripcion = s.Descripcion, PrecioBase = s.Precio_base, IdTipoServicio = s.Id_tipo_servicio };
+        mensajeError = mensajeExito = string.Empty; mostrarModal = true;
+    }
+    void CerrarModal() => mostrarModal = false;
+
+    async Task CambiarEstado(ServicioDto s)
+    {
+        var ok = await Api.CambiarEstadoServicioAsync(s.Id_servicio, !s.Activo);
+        if (ok) servicios = await Api.GetServiciosAsync();
+    }
+
+    async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(form.NombreServicio) || form.IdTipoServicio == 0 || form.PrecioBase <= 0)
+        { mensajeError = "Completa todos los campos obligatorios."; return; }
+
+        guardando = true;
+        bool ok;
+        if (esNuevo)
+            ok = await Api.CrearServicioAsync(new { IdTipoServicio = form.IdTipoServicio, NombreServicio = form.NombreServicio, Descripcion = form.Descripcion, PrecioBase = form.PrecioBase });
+        else
+            ok = await Api.ActualizarServicioAsync(editId, new { IdTipoServicio = form.IdTipoServicio, NombreServicio = form.NombreServicio, Descripcion = form.Descripcion, PrecioBase = form.PrecioBase });
+
+        guardando = false;
+        if (ok) { mensajeExito = "Guardado correctamente."; servicios = await Api.GetServiciosAsync(); await Task.Delay(1500); CerrarModal(); }
+        else mensajeError = "Error al guardar. Intenta de nuevo.";
+    }
+
+    class ServicioForm { public string NombreServicio { get; set; } = string.Empty; public string? Descripcion { get; set; } public decimal PrecioBase { get; set; } public int IdTipoServicio { get; set; } }
+}
+
+<style>
+    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .page-header h2 { margin:0; font-size:22px; color:#1e293b; }
+    .page-header p { margin:4px 0 0; color:#64748b; font-size:13px; }
+    .btn-primary { background:#0ea5e9; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600; }
+    .btn-primary:hover:not(:disabled) { background:#0284c7; }
+    .btn-primary:disabled { background:#93c5fd; cursor:not-allowed; }
+    .btn-secondary { background:#e2e8f0; color:#374151; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; }
+    .btn-edit { background:#f1f5f9; border:1px solid #d1d5db; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
+    .btn-activar    { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
+    .btn-desactivar { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:5px 12px; border-radius:6px; cursor:pointer; font-size:12px; }
+    .tabla-wrapper { background:white; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,0.08); overflow:hidden; }
+    .tabla { width:100%; border-collapse:collapse; font-size:13px; }
+    .tabla thead { background:#f8fafc; }
+    .tabla th { padding:12px 14px; text-align:left; font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #e2e8f0; }
+    .tabla td { padding:12px 14px; border-bottom:1px solid #f1f5f9; color:#374151; }
+    .tabla tr:last-child td { border-bottom:none; }
+    .tabla tr:hover td { background:#f8fafc; }
+    .badge-activo { background:#dcfce7; color:#166534; padding:2px 10px; border-radius:10px; font-size:11px; font-weight:600; }
+    .badge-inactivo { background:#fee2e2; color:#991b1b; padding:2px 10px; border-radius:10px; font-size:11px; font-weight:600; }
+    .loading { text-align:center; padding:40px; color:#64748b; }
+    .acceso-denegado { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:20px; border-radius:8px; text-align:center; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000; }
+    .modal { background:white; border-radius:12px; width:580px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
+    .modal-header { display:flex; justify-content:space-between; align-items:center; padding:20px 24px; border-bottom:1px solid #e2e8f0; }
+    .modal-header h3 { margin:0; font-size:17px; color:#1e293b; }
+    .btn-close { background:none; border:none; font-size:18px; cursor:pointer; color:#64748b; }
+    .modal-body { padding:24px; }
+    .modal-footer { padding:16px 24px; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:10px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-group { display:flex; flex-direction:column; gap:6px; }
+    .form-group label { font-size:13px; font-weight:600; color:#374151; }
+    .input-field { padding:9px 12px; border:1.5px solid #d1d5db; border-radius:8px; font-size:14px; }
+    .input-field:focus { outline:none; border-color:#0ea5e9; }
+    .alert-error { background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px; }
+    .alert-exito { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px; }
+</style>

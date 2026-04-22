@@ -1,0 +1,142 @@
+@page "/login"
+@rendermode InteractiveServer
+@using TransmisionesCaja.Auth
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+
+<div class="login-wrapper">
+    <div class="login-card">
+        <div class="login-header">
+            <h1>⚙️ Transmisiones MAG</h1>
+            <p>Sistema de Transmisiones</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(mensajeError))
+        {
+            <div class="alert-error">
+                ⚠️ @mensajeError
+            </div>
+        }
+
+        <div class="form-group">
+            <label>Usuario</label>
+            <input @bind="nombreUsuario"
+                   @bind:event="oninput"
+                   @onkeydown="TeclaEnter"
+                   placeholder="Nombre de usuario"
+                   class="input-field" />
+        </div>
+
+        <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password"
+                   @bind="contrasena"
+                   @bind:event="oninput"
+                   @onkeydown="TeclaEnter"
+                   placeholder="Contraseña"
+                   class="input-field" />
+        </div>
+
+        <button class="btn-login" @onclick="IniciarSesion" disabled="@cargando">
+            @if (cargando)
+            {
+                <span>Iniciando sesión...</span>
+            }
+            else
+            {
+                <span>🔐 Iniciar Sesión</span>
+            }
+        </button>
+    </div>
+</div>
+
+@code {
+    string nombreUsuario = string.Empty;
+    string contrasena    = string.Empty;
+    string mensajeError  = string.Empty;
+    bool   cargando      = false;
+async Task IniciarSesion()
+{
+    Console.WriteLine("--> BOTÓN CLICKEADO");
+    mensajeError = string.Empty;
+
+    if (string.IsNullOrWhiteSpace(nombreUsuario) || string.IsNullOrWhiteSpace(contrasena))
+    {
+        mensajeError = "Ingresa usuario y contraseña.";
+        StateHasChanged();
+        return;
+    }
+
+    cargando = true;
+    StateHasChanged();
+
+    try
+    {
+        Console.WriteLine($"--> Llamando LoginAsync con: {nombreUsuario}");
+        var exitoso = await Auth.LoginAsync(nombreUsuario, contrasena);
+        Console.WriteLine($"--> Resultado LoginAsync: {exitoso}");
+        Console.WriteLine($"--> EstaAutenticado: {Auth.EstaAutenticado}");
+
+        if (!exitoso)
+        {
+            mensajeError = "Usuario o contraseña incorrectos.";
+        }
+        else
+        {
+            Console.WriteLine("--> Navegando a /empleados...");
+            Nav.NavigateTo("/empleados", forceLoad: true);
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"--> EXCEPCIÓN: {ex.Message}");
+        mensajeError = $"Error: {ex.Message}";
+    }
+    finally
+    {
+        cargando = false;
+        StateHasChanged();
+    }
+}
+
+    async Task TeclaEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await IniciarSesion();
+    }
+}
+
+<style>
+    .login-wrapper {
+        min-height: 100vh; background: linear-gradient(135deg, #1e293b, #0f172a);
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .login-card {
+        background: white; border-radius: 12px; padding: 40px;
+        width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .login-header { text-align: center; margin-bottom: 28px; }
+    .login-header h1 { font-size: 28px; color: #1e293b; margin: 0; }
+    .login-header p { color: #64748b; margin: 6px 0 0; font-size: 14px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .input-field {
+        width: 100%; padding: 10px 14px; border: 1.5px solid #d1d5db;
+        border-radius: 8px; font-size: 14px; box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+    .input-field:focus { outline: none; border-color: #0ea5e9; }
+    .btn-login {
+        width: 100%; padding: 12px; background: #0ea5e9; color: white;
+        border: none; border-radius: 8px; font-size: 15px; font-weight: 600;
+        cursor: pointer; margin-top: 8px; transition: background 0.2s;
+    }
+    .btn-login:hover:not(:disabled) { background: #0284c7; }
+    .btn-login:disabled { background: #93c5fd; cursor: not-allowed; }
+    .alert-error {
+        background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+        padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+    }
+</style>

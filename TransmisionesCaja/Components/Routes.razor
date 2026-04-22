@@ -1,0 +1,30 @@
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Components.Pages
+@inject AuthService Auth
+@rendermode InteractiveServer
+
+@if (!Auth.EstaAutenticado)
+{
+    <Login />
+}
+else
+{
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="typeof(Layout.MainLayout)">
+                <p>Página no encontrada.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Auth.OnCambioEstado += () => InvokeAsync(StateHasChanged);
+    }
+}

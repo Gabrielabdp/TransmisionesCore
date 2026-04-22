@@ -1,0 +1,277 @@
+@page "/sucursales"
+@using TransmisionesCaja.Auth
+@using TransmisionesCaja.Services
+@inject ApiService Api
+@inject AuthService Auth
+@rendermode InteractiveServer
+
+@if (!Auth.EsAdmin())
+{
+    <div class="acceso-denegado">Solo los administradores pueden acceder a esta sección.</div>
+    return;
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Sucursales <span class="page-count">· @sucursales.Count</span></h1>
+        <p class="page-subtitle">Gestión de locales y sucursales</p>
+    </div>
+    <button class="btn-primary" @onclick="AbrirNuevo">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+        Nueva Sucursal
+    </button>
+</div>
+
+<!-- Search -->
+<div class="search-bar">
+    <span class="search-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+    </span>
+    <input class="search-input" type="text" placeholder="Buscar sucursales..."
+           value="@filtro" @oninput="e => filtro = e.Value?.ToString() ?? string.Empty" />
+</div>
+
+@if (cargando)
+{
+    <div class="loading">Cargando sucursales...</div>
+}
+else
+{
+    var filtradas = sucursales.Where(s => string.IsNullOrWhiteSpace(filtro) || s.Nombre_sucursal.Contains(filtro, StringComparison.OrdinalIgnoreCase) || (s.Direccion ?? "").Contains(filtro, StringComparison.OrdinalIgnoreCase)).ToList();
+    <div class="branches-grid">
+        @foreach (var s in filtradas)
+        {
+            <div class="branch-card">
+                <div class="branch-card-hover-bg"></div>
+                <div class="branch-card-content">
+                    <div class="branch-card-top">
+                        <div class="branch-icon-wrap">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        </div>
+                        @if (s.Activa)
+                        { <span class="badge badge-active"><span class="badge-dot" style="background:#22c55e;"></span>Activa</span> }
+                        else
+                        { <span class="badge badge-inactive"><span class="badge-dot" style="background:#ef4444;animation:none;"></span>Inactiva</span> }
+                    </div>
+                    <h3 class="branch-name">@s.Nombre_sucursal</h3>
+                    <div class="branch-location">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <span>@(s.Direccion ?? "Sin dirección registrada")</span>
+                    </div>
+                    <div class="branch-stats">
+                        <div class="branch-stat">
+                            <div class="branch-stat-label">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                <span>Teléfono</span>
+                            </div>
+                            <span class="branch-stat-value" style="font-family:monospace;">@(s.Telefono ?? "—")</span>
+                        </div>
+                    </div>
+                    @if (Auth.EsAdmin())
+                    {
+                        <div class="branch-actions">
+                            <button class="branch-edit-btn" @onclick="() => AbrirEditar(s)">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                Editar
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        @if (!filtradas.Any())
+        {
+            <div style="grid-column:span 3;"><div class="empty-state">No se encontraron sucursales</div></div>
+        }
+    </div>
+}
+
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">@(esNuevo ? "Nueva Sucursal" : "Editar Sucursal")</h2>
+                    <p class="modal-subtitle">@(esNuevo ? "Registra una nueva sucursal" : "Modifica los datos de la sucursal")</p>
+                </div>
+                <button class="btn-close-modal" @onclick="CerrarModal">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="modal-deco-line"></div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(mensajeError))
+                { <div class="alert-error"><svg fill="currentColor" viewBox="0 0 20 20" style="width:16px;height:16px;flex-shrink:0;"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg><span>@mensajeError</span></div> }
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">Nombre de la Sucursal *</label>
+                    <input @bind="form.NombreSucursal" class="input-field" placeholder="Ej: Sucursal Norte" />
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">Dirección</label>
+                    <input @bind="form.Direccion" class="input-field" placeholder="Calle, número, sector" />
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">Teléfono</label>
+                    <input @bind="form.Telefono" class="input-field" placeholder="809-000-0000" />
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">Provincia *</label>
+                    <select value="@form.IdProvincia" @onchange="OnProvinciaChanged" class="input-field">
+                        <option value="0">-- Seleccionar --</option>
+                        @foreach (var p in provincias)
+                        {
+                            <option value="@p.Id_provincia">@p.Nombre_provincia</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label class="form-label">Municipio *</label>
+                    <select @bind="form.IdMunicipio" class="input-field">
+                        <option value="0">-- Seleccionar --</option>
+                        @foreach (var m in municipios)
+                        {
+                            <option value="@m.Id_municipio">@m.Nombre_municipio</option>
+                        }
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                    <button class="btn-primary" @onclick="Guardar" disabled="@guardando">
+                        @(guardando ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<SucursalDto>  sucursales = new();
+    List<ProvinciaDto> provincias = new();
+    List<MunicipioDto> municipios = new();
+    bool cargando = true; bool mostrarModal = false; bool esNuevo = true; bool guardando = false;
+    int editId = 0;
+    string filtro = string.Empty;
+    string mensajeError = string.Empty; string mensajeExito = string.Empty;
+    SucursalForm form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { sucursales = await Api.GetSucursalesAsync(); provincias = await Api.GetProvinciasAsync(); }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        cargando = false;
+    }
+
+    async Task OnProvinciaChanged(ChangeEventArgs e)
+    {
+        form.IdProvincia = int.Parse(e.Value?.ToString() ?? "0");
+        form.IdMunicipio = 0;
+        municipios = form.IdProvincia > 0 ? await Api.GetMunicipiosAsync(form.IdProvincia) : new();
+    }
+
+    void AbrirNuevo() { esNuevo = true; form = new(); mensajeError = mensajeExito = string.Empty; municipios = new(); mostrarModal = true; }
+    void AbrirEditar(SucursalDto s) { esNuevo = false; editId = s.Id_sucursal; form = new() { NombreSucursal = s.Nombre_sucursal, Direccion = s.Direccion, Telefono = s.Telefono, IdMunicipio = s.Id_municipio }; mensajeError = mensajeExito = string.Empty; mostrarModal = true; }
+    void CerrarModal() => mostrarModal = false;
+
+    async Task Guardar()
+    {
+        if (string.IsNullOrWhiteSpace(form.NombreSucursal) || form.IdMunicipio == 0) { mensajeError = "Completa los campos obligatorios."; return; }
+        guardando = true;
+        bool ok = esNuevo
+            ? await Api.CrearSucursalAsync(new { IdMunicipio = form.IdMunicipio, NombreSucursal = form.NombreSucursal, Direccion = form.Direccion, Telefono = form.Telefono })
+            : await Api.ActualizarSucursalAsync(editId, new { IdMunicipio = form.IdMunicipio, NombreSucursal = form.NombreSucursal, Direccion = form.Direccion, Telefono = form.Telefono });
+        guardando = false;
+        if (ok) { sucursales = await Api.GetSucursalesAsync(); CerrarModal(); }
+        else mensajeError = "Error al guardar. Intenta de nuevo.";
+    }
+
+    async Task CambiarEstado(SucursalDto s)
+    {
+    }
+
+    class SucursalForm { public string NombreSucursal { get; set; } = string.Empty; public string? Direccion { get; set; } public string? Telefono { get; set; } public int IdProvincia { get; set; } public int IdMunicipio { get; set; } }
+}
+
+<style>
+    /* Estilos de la página */
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 1.8rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .page-count { font-size: 1rem; color: var(--text-muted); font-weight: 400; }
+    .page-subtitle { color: var(--text-muted); font-size: 0.9rem; margin: 4px 0 0; }
+
+    .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+    .btn-primary svg { width: 18px; height: 18px; }
+
+    .search-bar { position: relative; margin-bottom: 24px; }
+    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .search-icon svg { width: 18px; height: 18px; }
+    .search-input { width: 100%; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 12px 12px 42px; color: var(--text-primary); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+    .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+    /* Grid de Sucursales */
+    .branches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+    .branch-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 24px; position: relative; transition: all 0.3s ease; overflow: hidden; }
+    .branch-card:hover { transform: translateY(-4px); border-color: #3b82f6; box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
+    
+    .branch-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .branch-icon-wrap { width: 44px; height: 44px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #3b82f6; }
+    .branch-icon-wrap svg { width: 24px; height: 24px; }
+
+    .branch-name { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin: 0 0 8px 0; }
+    .branch-location { display: flex; gap: 8px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin-bottom: 20px; }
+    .branch-location svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+
+    .branch-stats { border-top: 1px solid var(--border-color); padding-top: 16px; margin-bottom: 20px; }
+    .branch-stat { display: flex; justify-content: space-between; align-items: center; }
+    .branch-stat-label { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.8rem; }
+    .branch-stat-label svg { width: 14px; height: 14px; }
+    .branch-stat-value { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
+
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .badge-active { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .badge-inactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    .branch-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .branch-edit-btn, .branch-delete-btn { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; padding: 8px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 0.8rem; transition: all 0.2s; }
+    .branch-edit-btn:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .branch-delete-btn:hover { background: #ef4444; color: white; border-color: #ef4444; }
+    .branch-edit-btn svg, .branch-delete-btn svg { width: 14px; height: 14px; }
+
+    /* Estilos del MODAL */
+    .modal-overlay { 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; 
+        justify-content: center; z-index: 2000; backdrop-filter: blur(4px); 
+    }
+    .modal { 
+        background: var(--bg-card); width: 100%; max-width: 500px; 
+        border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+        border: 1px solid var(--border-color); overflow: hidden;
+        animation: modalIn 0.3s ease-out;
+    }
+    @@keyframes modalIn {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header { padding: 24px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .modal-subtitle { color: var(--text-muted); font-size: 0.85rem; margin: 4px 0 0; }
+    .btn-close-modal { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 8px; transition: all 0.2s; }
+    .btn-close-modal:hover { background: rgba(255,255,255,0.05); color: #ef4444; }
+    .btn-close-modal svg { width: 24px; height: 24px; }
+
+    .modal-body { padding: 24px; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+    .input-field { width: 100%; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; color: var(--text-primary); font-size: 0.95rem; outline: none; }
+    .input-field:focus { border-color: #3b82f6; }
+
+    .modal-footer { margin-top: 32px; display: flex; justify-content: flex-end; gap: 12px; }
+    .btn-secondary { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-secondary:hover { background: rgba(255,255,255,0.05); }
+
+    .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; padding: 12px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+</style>

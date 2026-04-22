@@ -67,7 +67,7 @@ public class OrdenesController : ControllerBase
         }
         catch (OrdenNoConfirmableException ex)
         {
-            // Esto captura el error de la imagen f76d66 y devuelve un mensaje claro
+            
             return BadRequest(new { mensaje = ex.Message });
         }
         catch (Exception ex)

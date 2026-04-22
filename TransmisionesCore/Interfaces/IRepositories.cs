@@ -82,6 +82,7 @@ public interface IEmpleadoRepository
 
 public interface IUsuarioRepository
 {
+    Task<IEnumerable<Usuario>> ObtenerTodosAsync();
     Task<Usuario?> ObtenerPorIdAsync(int id);
     Task<Usuario?> LoginAsync(string nombreUsuario, string contrasena);
     Task<Usuario> InsertarAsync(Usuario usuario);
