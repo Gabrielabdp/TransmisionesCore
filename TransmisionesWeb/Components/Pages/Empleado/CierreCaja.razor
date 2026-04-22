@@ -1,0 +1,125 @@
+@page "/empleado/cierre"
+@layout EmpleadoLayout
+@rendermode InteractiveServer
+@inject ApiIntegracionClient Api
+@inject SessionStateService Session
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<EmpleadoAuthGuard>
+    <div class="d-print-none d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2 text-warning"></i>Cuadre de Caja</h3>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-dark rounded-pill" @onclick="Imprimir">
+                <i class="bi bi-printer me-1"></i>Imprimir
+            </button>
+            <button class="btn btn-danger rounded-pill fw-bold" @onclick="CerrarCaja" disabled="@_cerrando">
+                @if (_cerrando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                <i class="bi bi-door-closed me-1"></i>Cerrar Caja
+            </button>
+        </div>
+    </div>
+
+    @if (_cargando)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-warning"></div></div>
+    }
+    else
+    {
+        <div class="card border-0 shadow rounded-4" id="cuadre-print">
+            <div class="card-header bg-dark text-white text-center py-4">
+                <h4 class="fw-bold mb-0">Transmisiones MAG — Cuadre Diario</h4>
+                <p class="mb-0 text-white-50 small">@DateTime.Now.ToString("dd/MM/yyyy") · @Session.EmpleadoNombre</p>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-success bg-opacity-10 rounded-4 p-4 text-center">
+                            <i class="bi bi-arrow-up-circle-fill text-success display-5 mb-2"></i>
+                            <h6 class="text-muted fw-bold">VENTAS DEL DÍA</h6>
+                            <p class="fs-2 fw-bold text-success mb-0">
+                                RD$ @(_resumen?.TotalIngresos.ToString("N2") ?? "—")
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-danger bg-opacity-10 rounded-4 p-4 text-center">
+                            <i class="bi bi-arrow-down-circle-fill text-danger display-5 mb-2"></i>
+                            <h6 class="text-muted fw-bold">GASTOS DEL DÍA</h6>
+                            <p class="fs-2 fw-bold text-danger mb-0">
+                                RD$ @(_gastosDia.ToString("N2"))
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card border-0 bg-dark text-white rounded-4 p-4 text-center">
+                            <h5 class="text-warning fw-bold">EFECTIVO ESPERADO EN CAJA</h5>
+                            <p class="display-5 fw-bold mb-0">
+                                RD$ @EfectivoEsperado.ToString("N2")
+                            </p>
+                            <small class="text-white-50">Saldo inicial + ventas - gastos</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4"/>
+                <div class="row text-muted small">
+                    <div class="col-6"><strong>Saldo inicial:</strong> RD$ @(_estado?.SaldoInicial.ToString("N2") ?? "—")</div>
+                    <div class="col-6 text-end"><strong>Operaciones:</strong> @(_resumen?.CantidadOperaciones ?? 0)</div>
+                    <div class="col-6"><strong>Estado caja:</strong> @(_estado?.Estado ?? "—")</div>
+                    <div class="col-6 text-end"><strong>Cajero:</strong> @Session.EmpleadoNombre</div>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-danger mt-3 small d-print-none">@_error</div>
+        }
+    }
+</EmpleadoAuthGuard>
+
+@code {
+    private ResumenCajaDiarioDto? _resumen;
+    private EstadoCajaDto?        _estado;
+    private decimal               _gastosDia = 0;
+    private bool _cargando = true;
+    private bool _cerrando = false;
+    private string _error  = string.Empty;
+
+    private decimal EfectivoEsperado => (_estado?.SaldoInicial ?? 0) + (_resumen?.TotalIngresos ?? 0) - _gastosDia;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Session.CajaId.HasValue)
+        {
+            _resumen   = await Api.GetResumenHoyAsync();
+            _estado    = await Api.GetEstadoCajaAsync(Session.CajaId.Value);
+            _gastosDia = 0;
+        }
+        _cargando = false;
+    }
+
+    private async Task Imprimir() => await JS.InvokeVoidAsync("window.print");
+
+    private async Task CerrarCaja()
+    {
+        if (!Session.CajaId.HasValue || !Session.EmpleadoId.HasValue) return;
+        _cerrando = true;
+        _error    = string.Empty;
+
+        bool ok = await Api.CerrarCajaAsync(Session.CajaId.Value, Session.EmpleadoId.Value, EfectivoEsperado);
+
+        if (ok)
+        {
+            Session.CerrarSesionEmpleado();
+            Nav.NavigateTo("/empleado/apertura");
+        }
+        else
+        {
+            _error = "No se pudo cerrar la caja. Verifica la conexión e intenta nuevamente.";
+        }
+
+        _cerrando = false;
+    }
+}

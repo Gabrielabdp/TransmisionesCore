@@ -1,0 +1,135 @@
+@page "/empleado/apertura"
+@layout EmpleadoLayout
+@rendermode InteractiveServer
+@inject ApiIntegracionClient Api
+@inject SessionStateService Session
+@inject NavigationManager Nav
+@inject IConfiguration Config
+
+<div class="container-fluid bg-light vh-100 d-flex align-items-center justify-content-center">
+    <div class="card shadow-lg border-0 rounded-4" style="max-width: 450px; width: 100%;">
+        <div class="card-header bg-dark text-white text-center py-4 rounded-top-4">
+            <i class="bi bi-unlock-fill display-4 text-warning mb-2"></i>
+            <h2 class="fw-bold mb-0">Apertura de Caja</h2>
+            <p class="text-white-50 small mb-0">Transmisiones MAG - Gestión Operativa</p>
+        </div>
+        <div class="card-body p-5">
+            <EditForm Model="_model" OnValidSubmit="IniciarJornada">
+                <DataAnnotationsValidator />
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">CÓDIGO DE EMPLEADO</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-person-badge"></i>
+                        </span>
+                        <InputText @bind-Value="_model.Usuario"
+                                   class="form-control border-start-0 ps-0"
+                                   placeholder="Ej: EMP-001" />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">CONTRASEÑA</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-lock"></i>
+                        </span>
+                        <InputText type="password" @bind-Value="_model.Password"
+                                   class="form-control border-start-0 ps-0"
+                                   placeholder="••••••••" />
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-muted">MONTO INICIAL EN CAJA (RD$)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-cash-stack"></i>
+                        </span>
+                        <InputNumber @bind-Value="_model.MontoInicial"
+                                     class="form-control border-start-0 ps-0 fs-4 fw-bold text-success"
+                                     placeholder="0.00" />
+                    </div>
+                    <div class="form-text mt-2 small">Ingrese el fondo de sencillo disponible.</div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-danger py-2 small">
+                        <i class="bi bi-exclamation-triangle me-2"></i>@_error
+                    </div>
+                }
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-dark btn-lg py-3 fw-bold rounded-pill shadow"
+                            disabled="@_cargando">
+                        @if (_cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        INICIAR JORNADA <i class="bi bi-arrow-right ms-2"></i>
+                    </button>
+                    <a href="/" class="btn btn-link text-muted text-decoration-none small">
+                        Volver al Portal Principal
+                    </a>
+                </div>
+            </EditForm>
+        </div>
+        <div class="card-footer bg-white border-0 text-center pb-4">
+            <span class="badge bg-info-subtle text-info rounded-pill px-3 py-2">
+                Sucursal: Santo Domingo Centro
+            </span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly AperturaModel _model = new();
+    private string _error = string.Empty;
+    private bool _cargando = false;
+
+    private async Task IniciarJornada()
+    {
+        _cargando = true;
+        _error    = string.Empty;
+
+        var login = await Api.LoginAsync(_model.Usuario, _model.Password);
+
+        if (login is null)
+        {
+            _error = "Código o contraseña incorrectos. Intente de nuevo.";
+            _cargando = false;
+            return;
+        }
+
+        Session.EmpleadoId     = login.IdEmpleado;
+        Session.EmpleadoNombre = login.Nombre ?? _model.Usuario;
+        Session.EmpleadoRol    = login.Rol;
+
+        int cajaId = int.TryParse(Config["ApiIntegracion:CajaIdDefault"], out var c) ? c : 1;
+        Session.CajaId = cajaId;
+
+        bool abierta = await Api.AbrirCajaAsync(cajaId, login.IdEmpleado, _model.MontoInicial);
+
+        if (!abierta)
+        {
+            _error = "No se pudo abrir la caja. Es posible que ya esté abierta o que no haya conexión.";
+            Session.CerrarSesionEmpleado();
+            _cargando = false;
+            return;
+        }
+
+        Nav.NavigateTo("/empleado/caja");
+    }
+
+    private class AperturaModel
+    {
+        [System.ComponentModel.DataAnnotations.Required] public string  Usuario      { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Required] public string  Password     { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue)] public decimal MontoInicial { get; set; }
+    }
+}
+
+<style>
+    .input-group-text { border-radius: 0.75rem 0 0 0.75rem; }
+    .form-control { border-radius: 0 0.75rem 0.75rem 0; padding: 0.75rem; }
+    .form-control:focus { box-shadow: none; border-color: #dee2e6; }
+</style>
