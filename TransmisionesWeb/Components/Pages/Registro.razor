@@ -1,0 +1,122 @@
+@page "/registro"
+@layout MainLayout
+@rendermode InteractiveServer
+@inject ApiIntegracionClient Api
+@inject SessionStateService Session
+@inject NavigationManager Nav
+
+<div class="container py-4" style="max-width: 600px;">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-dark text-white text-center py-4 rounded-top-4">
+            <i class="bi bi-person-plus-fill display-4 text-warning mb-2"></i>
+            <h2 class="fw-bold mb-0">Crear Cuenta</h2>
+        </div>
+        <div class="card-body p-4">
+            <EditForm Model="_model" OnValidSubmit="Registrar">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-warning small" />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted">NOMBRE</label>
+                        <InputText @bind-Value="_model.NombreCliente" class="form-control rounded-3" placeholder="Juan" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-muted">APELLIDO</label>
+                        <InputText @bind-Value="_model.ApellidoCliente" class="form-control rounded-3" placeholder="Pérez" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold small text-muted">CÉDULA</label>
+                        <InputText @bind-Value="_model.Cedula" class="form-control rounded-3" placeholder="000-0000000-0" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold small text-muted">TELÉFONO</label>
+                        <InputText @bind-Value="_model.Telefono" class="form-control rounded-3" placeholder="809-000-0000" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold small text-muted">CORREO ELECTRÓNICO</label>
+                        <InputText @bind-Value="_model.Correo" class="form-control rounded-3" placeholder="juan@ejemplo.com" />
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(_mensaje))
+                {
+                    <div class="alert @AlertClass mt-3 small">
+                        @_mensaje
+                    </div>
+                }
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-dark btn-lg rounded-pill fw-bold"
+                            disabled="@_cargando">
+                        @if (_cargando) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                        CREAR CUENTA
+                    </button>
+                    <a href="/login" class="btn btn-link text-muted text-decoration-none small mt-2">
+                        Ya tengo cuenta
+                    </a>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private readonly RegistroModel _model = new();
+    private string _mensaje = string.Empty;
+    private bool _exito = false;
+    private bool _cargando = false;
+
+    private string AlertClass => _exito ? "alert-success" : "alert-danger";
+
+    private async Task Registrar()
+    {
+        _cargando = true;
+        _mensaje  = string.Empty;
+
+        var payload = new
+        {
+            IdSector     = 1,
+            IdMunicipio  = 1,
+            IdProvincia  = 1,
+            _model.NombreCliente,
+            _model.ApellidoCliente,
+            Cedula       = _model.Cedula,
+            _model.Telefono,
+            Correo       = _model.Correo
+        };
+
+        bool ok = await Api.RegistrarClienteAsync(payload);
+
+        if (ok)
+        {
+            _exito   = true;
+            _mensaje = "Cuenta creada exitosamente. Redirigiendo...";
+            var cliente = await Api.BuscarClientePorDocumentoAsync(_model.Cedula);
+            if (cliente is not null)
+            {
+                Session.ClienteId     = cliente.Id;
+                Session.ClienteNombre = $"{cliente.Nombre} {cliente.Apellido}";
+                Session.ClienteEmail  = cliente.Correo;
+                await Task.Delay(1000);
+                Nav.NavigateTo("/cliente/ordenes");
+            }
+        }
+        else
+        {
+            _exito   = false;
+            _mensaje = "Ocurrió un error al crear la cuenta. Inténtalo de nuevo.";
+        }
+
+        _cargando = false;
+    }
+
+    private class RegistroModel
+    {
+        [System.ComponentModel.DataAnnotations.Required] public string NombreCliente  { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Required] public string ApellidoCliente { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Required] public string Cedula         { get; set; } = string.Empty;
+        public string? Telefono { get; set; }
+        [System.ComponentModel.DataAnnotations.EmailAddress] public string? Correo    { get; set; }
+    }
+}
