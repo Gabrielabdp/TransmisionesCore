@@ -117,6 +117,21 @@ namespace TransmisionesIntegracion.Controllers
             return await EjecutarConsultaProxy($"https://localhost:56678/api/Cajas/{id}/estado-actual");
         }
 
+        [HttpPost("{idCaja}/gasto")]
+        public async Task<IActionResult> RegistrarGasto(int idCaja, [FromBody] GastoIntegracionDto peticion)
+        {
+            var payload = new { IdCaja = idCaja, Concepto = peticion.Concepto, Monto = peticion.Monto };
+            _context.TransaccionesPendientes.Add(new TransmisionesIntegracion.Models.TransaccionPendiente
+            {
+                TipoTransaccion = "RegistrarGasto",
+                DatosJson = System.Text.Json.JsonSerializer.Serialize(payload),
+                FechaIntento = DateTime.Now,
+                Sincronizado = false
+            });
+            await _context.SaveChangesAsync();
+            return Ok(new { exito = true, mensaje = "Gasto registrado." });
+        }
+
 
         private async Task<IActionResult> EjecutarConsultaProxy(string urlCore)
         {
@@ -154,4 +169,10 @@ public class CerrarCajaIntegracionDto
 {
     public int IdUsuario { get; set; }
     public decimal SaldoFinal { get; set; }
+}
+
+public class GastoIntegracionDto
+{
+    public string Concepto { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
 }
