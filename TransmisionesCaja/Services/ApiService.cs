@@ -205,20 +205,7 @@ public class ApiService
     // ==================== USUARIOS ====================
 
     public async Task<List<UsuarioDto>> GetUsuariosAsync()
-    {
-        var empleados = await GetEmpleadosAsync();
-        return empleados
-            .Where(e => e.Id_usuario > 0)
-            .GroupBy(e => e.Id_usuario)
-            .Select(g => new UsuarioDto
-            {
-                Id_usuario = g.Key,
-                Nombre_usuario = g.First().NombreCompleto,
-                Rol = g.First().Rol,
-                Activo = g.First().Activo
-            })
-            .ToList();
-    }
+        => await _http.GetFromJsonAsync<List<UsuarioDto>>("api/usuarios") ?? new();
 
     public async Task<List<UsuarioDto>> GetUsuariosDisponiblesAsync()
         => await _http.GetFromJsonAsync<List<UsuarioDto>>("api/usuarios?soloDisponibles=true") ?? new();

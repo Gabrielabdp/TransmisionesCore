@@ -15,16 +15,16 @@
 }
 
 <style>
-    /* RESET DE COLORES PARA MODO OSCURO (ESTILO EMPLEADOS) */
-    .page-title { color: #ffffff !important; font-weight: 700; }
-    .page-subtitle { color: #94a3b8 !important; }
+    /* RESET DE COLORES CON SOPORTE A VARIABLES (MODO CLARO/OSCURO) */
+    .page-title { color: var(--text-primary, #ffffff) !important; font-weight: 700; }
+    .page-subtitle { color: var(--text-muted, #94a3b8) !important; }
     .page-count { color: #60a5fa !important; font-weight: 600; }
 
     /* CONTENEDOR DE TABLA */
     .table-wrapper { 
-        background: #111827; 
+        background: var(--bg-card, #111827); 
         border-radius: 12px; 
-        border: 1px solid #1f2937; 
+        border: 1px solid var(--border-color, #1f2937); 
         overflow: hidden;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
@@ -32,19 +32,20 @@
     .custom-table { width: 100%; border-collapse: collapse; }
     
     .custom-table th {
-        background: #1f2937;
-        color: #94a3b8;
+        background: var(--bg-card, #1f2937);
+        color: var(--text-muted, #94a3b8);
         font-size: 11px;
         text-transform: uppercase;
         padding: 14px 16px;
         text-align: left;
         letter-spacing: 0.05em;
+        border-bottom: 1px solid var(--border-color, #1f2937);
     }
 
     .custom-table td { 
         padding: 16px; 
-        border-bottom: 1px solid #1f2937; 
-        color: #e5e7eb; 
+        border-bottom: 1px solid var(--border-color, #1f2937); 
+        color: var(--text-primary, #e5e7eb); 
         font-size: 14px;
         vertical-align: middle;
     }
@@ -56,11 +57,11 @@
         width: 38px; height: 38px; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: 12px;
-        background: #ffffff; color: #111827; /* Fondo blanco como en tu captura */
+        background: #3b82f6; color: #ffffff;
     }
 
-    .user-name { font-weight: 700; color: #ffffff !important; display: block; }
-    .user-meta { font-size: 12px; color: #64748b; }
+    .user-name { font-weight: 700; color: var(--text-primary, #ffffff) !important; display: block; }
+    .user-meta { font-size: 12px; color: var(--text-muted, #64748b); }
 
     /* BADGES (ROLES) */
     .badge-role {
@@ -88,10 +89,45 @@
         border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
     }
     .btn-action-v2 {
-        background: transparent; border: none; color: #64748b; padding: 8px; border-radius: 6px; cursor: pointer;
+        background: transparent; border: none; color: var(--text-muted, #64748b); padding: 8px; border-radius: 6px; cursor: pointer;
     }
-    .btn-action-v2:hover { background: #1f2937; color: #ffffff; }
+    .btn-action-v2:hover { background: var(--bg-main, #1f2937); color: var(--text-primary, #ffffff); }
     .btn-action-v2.danger:hover { background: rgba(239, 68, 68, 0.1); color: #f87171; }
+
+    /* MODALES */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center; z-index: 2000;
+    }
+    .modal {
+        background: var(--bg-card, #111827); border: 1px solid var(--border-color, #1f2937); border-radius: 16px;
+        width: 100%; max-width: 480px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+    .modal-header { padding: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .modal-title { font-size: 1.25rem; font-weight: 700; color: var(--text-primary, #ffffff); margin: 0; }
+    .modal-subtitle { font-size: 0.875rem; color: var(--text-muted, #94a3b8); margin: 4px 0 0; }
+    .btn-close-modal { background: none; border: none; color: var(--text-muted, #64748b); cursor: pointer; padding: 4px; border-radius: 6px; }
+    .btn-close-modal:hover { background: var(--bg-main, #1f2937); color: var(--text-primary, #ffffff); }
+    .modal-body { padding: 24px; }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted, #94a3b8); margin-bottom: 8px; }
+    .input-field {
+        width: 100%; background: var(--bg-main, #0f172a); border: 1px solid var(--border-color, #1f2937); border-radius: 8px;
+        padding: 10px 14px; color: var(--text-primary, #ffffff); font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    .input-field:focus { border-color: #0ea5e9; }
+    .modal-footer { padding: 20px 24px; background: var(--bg-card, #1f2937); display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color, #1f2937); }
+    .btn-secondary { background: transparent; border: 1px solid var(--border-color, #334155); color: var(--text-primary, #e5e7eb); padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .btn-secondary:hover { background: var(--bg-main, #334155); }
+    
+    .alert-warning {
+        background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 16px; border-radius: 12px; display: flex; gap: 12px; color: #f87171; margin-bottom: 20px;
+    }
+    .alert-warning svg { width: 24px; flex-shrink: 0; }
+    .alert-warning-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+    .alert-warning-text { font-size: 13px; opacity: 0.9; }
 </style>
 
 <div class="page-header">
@@ -105,9 +141,17 @@
     </button>
 </div>
 
+@if (!string.IsNullOrEmpty(mensajeExito))
+{
+    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #34d399; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+        <svg style="width:20px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        @mensajeExito
+    </div>
+}
+
 @if (cargando)
 {
-    <div style="color: #94a3b8; text-align: center; padding: 40px;">Cargando usuarios...</div>
+    <div style="color: var(--text-muted, #94a3b8); text-align: center; padding: 40px;">Cargando usuarios...</div>
 }
 else
 {
@@ -126,7 +170,7 @@ else
                 @foreach (var u in usuarios)
                 {
                     <tr>
-                        <td style="font-family: monospace; color: #64748b;">#@u.Id_usuario.ToString("D2")</td>
+                        <td style="font-family: monospace; color: var(--text-muted, #64748b);">#@u.Id_usuario.ToString("D2")</td>
                         <td>
                             <div class="user-profile-cell">
                                 <div class="user-avatar">
@@ -169,13 +213,98 @@ else
     </div>
 }
 
+@if (mostrarModal)
+{
+    <div class="modal-overlay" @onclick="CerrarModal">
+        <div class="modal" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">@(esNuevo ? "Nuevo Usuario" : "Editar Usuario")</h2>
+                    <p class="modal-subtitle">@(esNuevo ? "Crea una cuenta de acceso" : "Modifica los permisos de la cuenta")</p>
+                </div>
+                <button class="btn-close-modal" @onclick="CerrarModal">
+                    <svg style="width:20px" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(mensajeErrorModal))
+                {
+                    <div style="color: #f87171; font-size: 13px; margin-bottom: 16px;">@mensajeErrorModal</div>
+                }
+
+                <div class="form-group">
+                    <label class="form-label">Nombre de Usuario</label>
+                    <input @bind="form.NombreUsuario" class="input-field" placeholder="ej. jdoe" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contraseña @(esNuevo ? "*" : "(dejar en blanco para no cambiar)")</label>
+                    <input type="password" @bind="form.Contrasena" class="input-field" placeholder="••••••••" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Rol del Sistema</label>
+                    <select @bind="form.Rol" class="input-field">
+                        <option value="Admin">Administrador</option>
+                        <option value="Cajero">Cajero</option>
+                        <option value="Tecnico">Técnico</option>
+                    </select>
+                </div>
+
+                @if (!esNuevo)
+                {
+                    <div class="form-group" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" @bind="form.Activo" id="chkActivo" />
+                        <label for="chkActivo" class="form-label" style="margin: 0;">Usuario Activo</label>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                <button class="btn-primary" @onclick="Guardar" disabled="@guardando">
+                    @(guardando ? "Guardando..." : "Guardar Usuario")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (mostrarConfirm)
+{
+    <div class="modal-overlay" @onclick="() => mostrarConfirm = false">
+        <div class="modal" style="max-width:400px;" @onclick:stopPropagation>
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title">¿Desactivar usuario?</h2>
+                    <p class="modal-subtitle">El usuario no podrá iniciar sesión</p>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="alert-warning">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <div>
+                        <div class="alert-warning-title">Confirmar acción</div>
+                        <div class="alert-warning-text">¿Estás seguro de que deseas desactivar a <strong>@usuarioADesactivar?.Nombre_usuario</strong>?</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="() => mostrarConfirm = false">Cancelar</button>
+                <button class="btn-primary" style="background: #ef4444;" @onclick="EjecutarDesactivar" disabled="@guardando">
+                    @(guardando ? "Procesando..." : "Sí, desactivar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
-    // TODA LA LÓGICA PERMANECE IGUAL
     List<UsuarioDto> usuarios = new();
     bool cargando = true; bool mostrarModal = false; bool mostrarConfirm = false;
     bool esNuevo = true; bool guardando = false;
     int editId = 0;
     string mensajeError = string.Empty; string mensajeExito = string.Empty;
+    string mensajeErrorModal = string.Empty;
     UsuarioForm form = new();
     UsuarioDto? usuarioADesactivar = null;
 
@@ -187,14 +316,16 @@ else
         try { usuarios = await Api.GetUsuariosAsync(); }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
         cargando = false;
+        StateHasChanged();
     }
 
-    void AbrirNuevo() { esNuevo = true; form = new(); mostrarModal = true; }
+    void AbrirNuevo() { esNuevo = true; form = new(); mensajeErrorModal = string.Empty; mostrarModal = true; }
     void AbrirEditar(UsuarioDto u)
     {
         esNuevo = false;
         editId = u.Id_usuario;
         form = new() { NombreUsuario = u.Nombre_usuario, Rol = u.Rol, Activo = u.Activo };
+        mensajeErrorModal = string.Empty;
         mostrarModal = true;
     }
     void CerrarModal() => mostrarModal = false;
@@ -203,27 +334,64 @@ else
     async Task EjecutarDesactivar()
     {
         if (usuarioADesactivar == null) return;
+        guardando = true;
+        StateHasChanged();
+        
         var ok = await Api.EliminarUsuarioAsync(usuarioADesactivar.Id_usuario);
-        if (ok) await CargarDatos();
+        if (ok) 
+        { 
+            mensajeExito = $"Usuario '{usuarioADesactivar.Nombre_usuario}' desactivado correctamente.";
+            await CargarDatos(); 
+            mostrarConfirm = false;
+            StateHasChanged();
+            _ = Task.Delay(3000).ContinueWith(_ => { mensajeExito = string.Empty; InvokeAsync(StateHasChanged); });
+        }
+        else
+        {
+            mensajeError = "No se pudo desactivar el usuario.";
+        }
+        
+        guardando = false;
         mostrarConfirm = false;
-    }
-
-    async Task Reactivar(UsuarioDto u)
-    {
-        var ok = await Api.ActualizarUsuarioAsync(u.Id_usuario, new { Nombre_usuario = u.Nombre_usuario, Rol = u.Rol, Activo = true });
-        if (ok) await CargarDatos();
+        StateHasChanged();
     }
 
     async Task Guardar()
     {
-        if (string.IsNullOrWhiteSpace(form.NombreUsuario)) return;
-        guardando = true;
-        bool ok = esNuevo
-            ? await Api.CrearUsuarioAsync(new { Nombre_usuario = form.NombreUsuario, Contrasena = form.Contrasena!, Rol = form.Rol })
-            : await Api.ActualizarUsuarioAsync(editId, new { Nombre_usuario = form.NombreUsuario, Rol = form.Rol, Activo = form.Activo, Contrasena = form.Contrasena });
+        if (string.IsNullOrWhiteSpace(form.NombreUsuario)) { mensajeErrorModal = "El nombre de usuario es obligatorio."; return; }
+        if (esNuevo && string.IsNullOrWhiteSpace(form.Contrasena)) { mensajeErrorModal = "La contraseña es obligatoria."; return; }
         
-        if (ok) { await CargarDatos(); CerrarModal(); }
+        guardando = true;
+        mensajeErrorModal = string.Empty;
+        StateHasChanged();
+
+        // Aseguramos que los nombres de las propiedades coincidan con la API
+        var payload = new 
+        { 
+            Nombre_usuario = form.NombreUsuario, 
+            Rol = form.Rol, 
+            Activo = form.Activo,
+            Contrasena = string.IsNullOrWhiteSpace(form.Contrasena) ? null : form.Contrasena 
+        };
+
+        bool ok = esNuevo
+            ? await Api.CrearUsuarioAsync(payload)
+            : await Api.ActualizarUsuarioAsync(editId, payload);
+        
+        if (ok) 
+        { 
+            mensajeExito = esNuevo ? "Usuario creado correctamente." : "Usuario actualizado correctamente.";
+            await CargarDatos(); 
+            CerrarModal(); 
+            StateHasChanged();
+            _ = Task.Delay(3000).ContinueWith(_ => { mensajeExito = string.Empty; InvokeAsync(StateHasChanged); });
+        }
+        else 
+        {
+            mensajeErrorModal = "Error al guardar. Puede que el nombre de usuario ya exista.";
+        }
         guardando = false;
+        StateHasChanged();
     }
 
     string GetRolBadge(string rol) => rol?.ToLower() switch { "admin" => "badge-indigo", "cajero" => "badge-amber", "tecnico" => "badge-purple", _ => "badge-indigo" };

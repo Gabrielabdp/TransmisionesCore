@@ -108,6 +108,30 @@ public class UsuariosController : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("migrar-passwords")]
+    public async Task<IActionResult> MigrarPasswords()
+    {
+        // 1. Traer todos los usuarios de la base de datos
+        var usuarios = await _context.Usuarios.ToListAsync();
+        int cont = 0;
+
+        foreach (var u in usuarios)
+        {
+            // Verificamos si ya está hasheada para no hashear un hash 
+            // (BCrypt usualmente empieza con $2a$ o $2b$)
+            if (!u.Contrasena.StartsWith("$2"))
+            {
+                u.Contrasena = BCrypt.Net.BCrypt.HashPassword(u.Contrasena);
+                cont++;
+            }
+        }
+
+        // 2. Guardar todos los cambios en SQL Server
+        await _context.SaveChangesAsync();
+
+        return Ok(new { mensaje = $"Se han hasheado {cont} contraseñas con éxito." });
+    }
+
 }
 
 public record UsuarioCrearRequest(string Nombre_usuario, string Contrasena, string Rol);
