@@ -1,0 +1,17 @@
+@inject SessionStateService Session
+@inject NavigationManager Nav
+
+@if (Session.EsEmpleadoAutenticado)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!Session.EsEmpleadoAutenticado)
+            Nav.NavigateTo("/empleado/apertura");
+    }
+}

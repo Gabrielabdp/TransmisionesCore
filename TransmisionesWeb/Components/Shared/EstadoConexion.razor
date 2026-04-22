@@ -1,0 +1,37 @@
+@inject ApiIntegracionClient Api
+@implements IDisposable
+
+@if (_estado is not null)
+{
+    @if (_estado.AzureDisponible)
+    {
+        <span class="badge bg-success rounded-pill px-3">
+            <i class="bi bi-wifi me-1"></i>En línea
+        </span>
+    }
+    else
+    {
+        <span class="badge bg-danger rounded-pill px-3" title="@_estado.TransaccionesPendientes transacciones pendientes">
+            <i class="bi bi-wifi-off me-1"></i>Offline — @_estado.TransaccionesPendientes pendiente(s)
+        </span>
+    }
+}
+
+@code {
+    private EstadoSistemaDto? _estado;
+    private Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefrescarEstado();
+        _timer = new Timer(async _ =>
+        {
+            await RefrescarEstado();
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    private async Task RefrescarEstado() => _estado = await Api.GetEstadoAsync();
+
+    public void Dispose() => _timer?.Dispose();
+}

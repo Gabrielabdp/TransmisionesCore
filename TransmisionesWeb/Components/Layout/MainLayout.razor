@@ -1,23 +1,32 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject SessionStateService Session
+@inject NavigationManager Nav
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
+<nav class="navbar navbar-dark bg-dark px-4">
+    <a class="navbar-brand fw-bold" href="/">
+        <i class="bi bi-gear-fill text-warning me-2"></i>Transmisiones MAG
+    </a>
+    <div class="d-flex align-items-center gap-3">
+        @if (Session.EsClienteAutenticado)
+        {
+            <span class="text-white-50 small">Hola, <strong class="text-white">@Session.ClienteNombre</strong></span>
+            <button class="btn btn-outline-light btn-sm" @onclick="CerrarSesion">Salir</button>
+        }
+        else
+        {
+            <a class="btn btn-warning btn-sm fw-bold" href="/login">Acceder</a>
+        }
     </div>
+</nav>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+<main class="container py-4">
+    @Body
+</main>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
-
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
+@code {
+    private void CerrarSesion()
+    {
+        Session.CerrarSesionCliente();
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}
