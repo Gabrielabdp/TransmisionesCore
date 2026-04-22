@@ -168,18 +168,20 @@ namespace TransmisionesIntegracion.Controllers
 
         private IActionResult BuscarDocumentoEnCache(string documento)
         {
-            // Búsqueda Offline (LINQ): Filtramos donde el documento contenga el texto buscado
-            var clientesLocales = _context.ClientesCache
-                                          .Where(c => c.Documento.Contains(documento))
-                                          .ToList();
+            var clienteLocal = _context.ClientesCache
+                                       .FirstOrDefault(c => c.Documento.Contains(documento));
 
-            if (clientesLocales.Any())
+            if (clienteLocal != null)
             {
+                // Devolvemos el mismo shape que ClienteBusquedaDTO del API central
                 return Ok(new
                 {
-                    modoOffline = true,
-                    mensaje = "Mostrando resultados locales.",
-                    datos = clientesLocales
+                    idCliente      = clienteLocal.Id,
+                    nombreCompleto = $"{clienteLocal.Nombre} {clienteLocal.Apellido}",
+                    documento      = clienteLocal.Documento,
+                    telefono       = clienteLocal.Telefono,
+                    correo         = (string?)null,
+                    modoOffline    = true
                 });
             }
 

@@ -12,6 +12,12 @@ namespace TransmisionesIntegracion
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+            builder.Services.AddHttpClient("").ConfigurePrimaryHttpMessageHandler(() =>
+                new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback =
+                        HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
             builder.Services.AddHttpClient();
 
             builder.Services.AddDbContext<IntegracionDbContext>(opciones =>

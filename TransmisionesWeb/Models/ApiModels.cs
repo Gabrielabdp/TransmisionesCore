@@ -1,10 +1,12 @@
+using System.Text.Json.Serialization;
+
 namespace TransmisionesWeb.Models;
 
 public record EstadoSistemaDto(bool AzureDisponible, int TransaccionesPendientes, DateTime Timestamp);
 
 public record ClienteDto(
-    int Id,
-    string Nombre,
+    [property: JsonPropertyName("idCliente")] int Id,
+    [property: JsonPropertyName("nombreCompleto")] string Nombre,
     string Apellido,
     string Documento,
     string? Telefono,
@@ -42,11 +44,11 @@ public record FacturaDto(
 );
 
 public record LoginResponseDto(
-    int IdEmpleado,
-    string? Nombre,
+    [property: JsonPropertyName("id_empleado")] int IdEmpleado,
+    [property: JsonPropertyName("nombreCompleto")] string? Nombre,
     string? Rol,
-    int? IdSucursal,
-    string? NombreSucursal,
+    [property: JsonPropertyName("id_sucursal")] int? IdSucursal,
+    [property: JsonPropertyName("sucursal")] string? NombreSucursal,
     bool ModoOffline
 );
 
